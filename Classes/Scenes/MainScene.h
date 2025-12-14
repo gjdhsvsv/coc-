@@ -16,6 +16,15 @@ public:
     void setZoom(float z);
     void setupInteraction();
 private:
+    struct PlacedBuilding { int id; int r; int c; cocos2d::Sprite* sprite; };
+    std::vector<PlacedBuilding> _buildings;
+    bool _moving = false;
+    int _movingIndex = -1;
+    bool canPlaceIgnoring(int r, int c, int ignoreIndex) const;
+    int findBuildingCenter(int r, int c) const;
+    void redrawOccupied();
+    void commitMove(int r, int c);
+    void cancelMove();
     void buildGrid();
     int _rows = 20;
     int _cols = 20;

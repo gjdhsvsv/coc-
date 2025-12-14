@@ -6,6 +6,7 @@
 #include "GameObjects/Buildings/ResourceBuilding.h"
 #include "GameObjects/Buildings/TroopBuilding.h"
 #include <memory>
+#include <cmath>
 using namespace cocos2d;
 
 Scene* MainScene::createScene()
@@ -144,7 +145,7 @@ bool MainScene::init()
         };
     _eventDispatcher->addEventListenerWithSceneGraphPriority(listener, this);
 
-    //½¨ÖþÍ¼Æ¬µ÷²Î
+    //ï¿½ï¿½ï¿½ï¿½Í¼Æ¬ï¿½ï¿½ï¿½ï¿½
     setBuildingScale(0.5f);
 
     setBuildingScaleForId(1, 0.4f);
@@ -255,22 +256,37 @@ void MainScene::setupInteraction()
     mouse->onMouseDown = [this](Event* e) {
         auto ev = static_cast<EventMouse*>(e);
         if (ev->getMouseButton() == EventMouse::MouseButton::BUTTON_LEFT) {
+            Vec2 cur(ev->getCursorX(), ev->getCursorY());
+            Vec2 ij = worldToGrid(cur);
+            int r = (int)std::round(ij.x);
+            int c = (int)std::round(ij.y);
             if (_placing) {
-                Vec2 cur(ev->getCursorX(), ev->getCursorY());
-                Vec2 ij = worldToGrid(cur);
-                int r = (int)std::round(ij.x);
-                int c = (int)std::round(ij.y);
                 if (canPlace(r, c)) placeBuilding(r, c, _placingId);
                 cancelPlacement();
             }
+            else if (_moving) {
+                if (canPlaceIgnoring(r, c, _movingIndex)) commitMove(r, c);
+                cancelMove();
+            }
             else {
-                _dragging = true;
-                _lastMouse = Vec2(ev->getCursorX(), ev->getCursorY());
+                int idx = findBuildingCenter(r, c);
+                if (idx != -1) {
+                    _moving = true;
+                    _movingIndex = idx;
+                    _hint->clear();
+                }
+                else {
+                    _dragging = true;
+                    _lastMouse = Vec2(ev->getCursorX(), ev->getCursorY());
+                }
             }
         }
         else if (ev->getMouseButton() == EventMouse::MouseButton::BUTTON_RIGHT) {
             if (_placing) {
                 cancelPlacement();
+            }
+            if (_moving) {
+                cancelMove();
             }
         }
         };
@@ -293,6 +309,21 @@ void MainScene::setupInteraction()
                     int rr = r + dr, cc = c + dc;
                     if (rr >= 0 && rr < _rows && cc >= 0 && cc < _cols)
                         drawCellFilled(rr, cc, Color4F(0.3f, 0.9f, 0.3f, 0.35f), _hint);
+                }
+            }
+        }
+        else if (_moving) {
+            _hint->clear();
+            Vec2 ij = worldToGrid(cur);
+            int r = (int)std::round(ij.x);
+            int c = (int)std::round(ij.y);
+            bool ok = canPlaceIgnoring(r, c, _movingIndex);
+            Color4F col = ok ? Color4F(0.3f, 0.9f, 0.3f, 0.35f) : Color4F(0.9f, 0.3f, 0.3f, 0.35f);
+            for (int dr = -1; dr <= 1; ++dr) {
+                for (int dc = -1; dc <= 1; ++dc) {
+                    int rr = r + dr, cc = c + dc;
+                    if (rr >= 0 && rr < _rows && cc >= 0 && cc < _cols)
+                        drawCellFilled(rr, cc, col, _hint);
                 }
             }
         }
@@ -390,6 +421,7 @@ void MainScene::placeBuilding(int r, int c, int id)
     s->setPosition(center + off);
     s->setScale(_buildingScale * _buildingScaleById[idx]);
     _world->addChild(s, 3);
+    _buildings.push_back({ id, r, c, s });
 }
 
 void MainScene::setBuildingScale(float s)
@@ -407,4 +439,60 @@ void MainScene::setBuildingOffsetForId(int id, const Vec2& off)
 {
     if (id < 1 || id > 8) return;
     _buildingOffsetById[id] = off;
+}
+
+bool MainScene::canPlaceIgnoring(int r, int c, int ignoreIndex) const
+{
+    if (r < 1 || r > _rows - 2 || c < 1 || c > _cols - 2) return false;
+    int br = _buildings[ignoreIndex].r;
+    int bc = _buildings[ignoreIndex].c;
+    for (int dr = -1; dr <= 1; ++dr)
+        for (int dc = -1; dc <= 1; ++dc) {
+            int rr = r + dr, cc = c + dc;
+            bool inOld = std::abs(rr - br) <= 1 && std::abs(cc - bc) <= 1;
+            if (!inOld && _occupy[rr][cc] != 0) return false;
+        }
+    return true;
+}
+
+int MainScene::findBuildingCenter(int r, int c) const
+{
+    for (size_t i = 0; i < _buildings.size(); ++i) {
+        if (_buildings[i].r == r && _buildings[i].c == c) return (int)i;
+    }
+    return -1;
+}
+
+void MainScene::redrawOccupied()
+{
+    if (_occupied) _occupied->clear();
+    for (const auto& b : _buildings) {
+        for (int dr = -1; dr <= 1; ++dr)
+            for (int dc = -1; dc <= 1; ++dc)
+                drawCellFilled(b.r + dr, b.c + dc, Color4F(0.2f, 0.8f, 0.2f, 0.6f), _occupied);
+    }
+}
+
+void MainScene::commitMove(int r, int c)
+{
+    auto& b = _buildings[_movingIndex];
+    for (int dr = -1; dr <= 1; ++dr)
+        for (int dc = -1; dc <= 1; ++dc)
+            _occupy[b.r + dr][b.c + dc] = 0;
+    for (int dr = -1; dr <= 1; ++dr)
+        for (int dc = -1; dc <= 1; ++dc)
+            _occupy[r + dr][c + dc] = b.id;
+    Vec2 center(_anchor.x + (c - r) * (_tileW * 0.5f), _anchor.y - (c + r) * (_tileH * 0.5f));
+    int idx = std::max(1, std::min(8, b.id));
+    Vec2 off = _buildingOffsetById[idx];
+    if (b.sprite) b.sprite->setPosition(center + off);
+    b.r = r; b.c = c;
+    redrawOccupied();
+}
+
+void MainScene::cancelMove()
+{
+    _moving = false;
+    _movingIndex = -1;
+    if (_hint) _hint->clear();
 }
