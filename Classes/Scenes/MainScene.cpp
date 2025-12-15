@@ -2,6 +2,7 @@
 #include "Managers/SoundManager.h"
 #include "UI/ResourcePanel.h"
 #include "UI/BuildingButton.h"
+#include "UI/CustomButton.h"
 #include "GameObjects/Buildings/Building.h"
 #include "GameObjects/Buildings/DefenseBuilding.h"
 #include "GameObjects/Buildings/ResourceBuilding.h"
@@ -139,7 +140,9 @@ bool MainScene::init()
     this->addChild(btn, 40);
     auto resPanel = ResourcePanel::create();
     resPanel->setName("ResourcePanel");
+    resPanel->onSetTimeScale = [this](float s) { setTimeScale(s); };
     this->addChild(resPanel, 45);
+    this->scheduleUpdate();
 
     auto listener = EventListenerKeyboard::create();
     listener->onKeyPressed = [this](EventKeyboard::KeyCode code, Event*) {
@@ -262,6 +265,79 @@ void MainScene::setResourceUiScale(float s)
     }
 }
 
+void MainScene::update(float dt)
+{
+    for (size_t i = 0; i < _buildings.size(); ++i) {
+        auto& pb = _buildings[i];
+        if (!pb.data) continue;
+        if (auto ec = dynamic_cast<ElixirCollector*>(pb.data.get())) {
+            ec->updateProduction(dt, _timeScale);
+            ec->manageCollectPrompt(this, pb.sprite);
+        } else if (auto gm = dynamic_cast<GoldMine*>(pb.data.get())) {
+            gm->updateProduction(dt, _timeScale);
+            gm->manageCollectPrompt(this, pb.sprite);
+        }
+    }
+}
+#include "Managers/ConfigManager.h"
+
+int MainScene::getTownHallLevel() const
+{
+    for (const auto& b : _buildings) {
+        if (b.id == 9 && b.data) return b.data->level;
+    }
+    return 1;
+}
+
+void MainScene::openUpgradeWindowForIndex(int idx)
+{
+    if (idx < 0 || idx >= (int)_buildings.size()) return;
+    auto& b = _buildings[idx];
+    int curLv = b.data ? b.data->level : 1;
+    int nextLv = std::min(ConfigManager::getMaxLevel(), curLv + 1);
+    auto cost = ConfigManager::getUpgradeCost(b.id, nextLv);
+    int thLevel = getTownHallLevel();
+    bool isMax = (curLv >= ConfigManager::getMaxLevel());
+    bool disabled = isMax || (b.id != 9 && nextLv > thLevel);
+    std::string title = cocos2d::StringUtils::format("%s (Level %d)", ConfigManager::getBuildingName(b.id).c_str(), curLv);
+    std::string resName = cost.useGold ? "Gold" : "Elixir";
+    auto modal = CustomButton::createUpgradePanel(title, resName, cost.amount, disabled, isMax,
+        [this, idx, nextLv, cost]() {
+            auto& pb = _buildings[idx];
+            if (!pb.data) return;
+            int curLv2 = pb.data->level;
+            if (curLv2 >= ConfigManager::getMaxLevel()) { return; }
+            if (pb.id != 9) {
+                int th = getTownHallLevel();
+                if (nextLv > th) return;
+            }
+            bool ok = false;
+            if (cost.useGold) ok = ResourceManager::spendGold(cost.amount);
+            else ok = ResourceManager::spendElixir(cost.amount);
+            if (ok) {
+                pb.data->level = curLv2 + 1;
+                if (pb.id == 3) {
+                    auto ec = dynamic_cast<ElixirCollector*>(pb.data.get());
+                    if (ec) {
+                        ec->setupStats(pb.data->level);
+                    } else {
+                        pb.data->hpMax = std::max(pb.data->hpMax, pb.data->hpMax); // no-op safeguard
+                    }
+                } else if (pb.id == 5) {
+                    auto gm = dynamic_cast<GoldMine*>(pb.data.get());
+                    if (gm) {
+                        gm->setupStats(pb.data->level);
+                    } else {
+                        pb.data->hpMax = std::max(pb.data->hpMax, pb.data->hpMax);
+                    }
+                }
+            }
+        },
+        []() {}
+    );
+    this->addChild(modal, 100);
+}
+
  
 
 void MainScene::setupInteraction()
@@ -292,23 +368,53 @@ void MainScene::setupInteraction()
             else {
                 int idx = findBuildingCenter(r, c);
                 if (idx != -1) {
-                    _moving = true;
-                    _movingIndex = idx;
-                    _hint->clear();
-                }
-                else {
-                    _dragging = true;
-                    _lastMouse = Vec2(ev->getCursorX(), ev->getCursorY());
+                    auto& pb = _buildings[idx];
+                    if (pb.data) {
+                        auto ec = dynamic_cast<ElixirCollector*>(pb.data.get());
+                        if (ec) {
+                            bool canCollect = ec->canCollect();
+                            if (canCollect) {
+                                int deliver = ec->collect();
+                            }
+                            else {
+                                _moving = true;
+                                _movingIndex = idx;
+                                _hint->clear();
+                            }
+                        }
+                        else if (auto gm = dynamic_cast<GoldMine*>(pb.data.get())) {
+                            bool canCollect = gm->canCollect();
+                            if (canCollect) {
+                                int deliver = gm->collect();
+                            }
+                            else {
+                                _moving = true;
+                                _movingIndex = idx;
+                                _hint->clear();
+                            }
+                        }
+                        else {
+                            _moving = true;
+                            _movingIndex = idx;
+                            _hint->clear();
+                        }
+                    }
+                    else {
+                        _dragging = true;
+                        _lastMouse = Vec2(ev->getCursorX(), ev->getCursorY());
+                    }
                 }
             }
         }
         else if (ev->getMouseButton() == EventMouse::MouseButton::BUTTON_RIGHT) {
-            if (_placing) {
-                cancelPlacement();
-            }
-            if (_moving) {
-                cancelMove();
-            }
+            if (_placing) { cancelPlacement(); }
+            if (_moving) { cancelMove(); }
+            Vec2 cur(ev->getCursorX(), ev->getCursorY());
+            Vec2 ij = worldToGrid(cur);
+            int r = (int)std::round(ij.x);
+            int c = (int)std::round(ij.y);
+            int idx = findBuildingCenter(r, c);
+            if (idx != -1) openUpgradeWindowForIndex(idx);
         }
         };
     mouse->onMouseUp = [this](Event* e) {
@@ -416,6 +522,12 @@ void MainScene::drawCellFilled(int r, int c, const Color4F& color, DrawNode* lay
 
 void MainScene::placeBuilding(int r, int c, int id)
 {
+    auto buildCost = ConfigManager::getBuildCost(id);
+    if (buildCost.amount > 0) {
+        bool ok = buildCost.useGold ? ResourceManager::spendGold(buildCost.amount)
+                                    : ResourceManager::spendElixir(buildCost.amount);
+        if (!ok) return;
+    }
     for (int dr = -1; dr <= 1; ++dr)
         for (int dc = -1; dc <= 1; ++dc)
             _occupy[r + dr][c + dc] = id;
@@ -436,6 +548,23 @@ void MainScene::placeBuilding(int r, int c, int id)
         case 9: b.reset(new TownHall()); break;
         default: b.reset(new Building()); break;
     }
+    b->hpMax = 100;
+    b->hp = 100;
+    b->level = 1;
+    if (id == 3) {
+        auto ec = dynamic_cast<ElixirCollector*>(b.get());
+        if (ec) {
+            ec->setupStats(b->level);
+            ec->stored = 0.f;
+        }
+    }
+    if (id == 5) {
+        auto gm = dynamic_cast<GoldMine*>(b.get());
+        if (gm) {
+            gm->setupStats(b->level);
+            gm->stored = 0.f;
+        }
+    }
     auto s = b->createSprite();
     Vec2 center(_anchor.x + (c - r) * (_tileW * 0.5f), _anchor.y - (c + r) * (_tileH * 0.5f));
     int idx = std::max(1, std::min(9, id));
@@ -443,7 +572,8 @@ void MainScene::placeBuilding(int r, int c, int id)
     s->setPosition(center + off);
     s->setScale(_buildingScale * _buildingScaleById[idx]);
     _world->addChild(s, 3);
-    _buildings.push_back({ id, r, c, s });
+    std::shared_ptr<Building> ptr(b.release());
+    _buildings.push_back({ id, r, c, s, ptr });
 }
 
 void MainScene::setBuildingScale(float s)

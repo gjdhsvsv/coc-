@@ -1,6 +1,8 @@
 #pragma once
 #include "cocos2d.h"
 #include <vector>
+#include <memory>
+#include <unordered_map>
 
 class MainScene : public cocos2d::Scene
 {
@@ -15,8 +17,10 @@ public:
     cocos2d::Vec2 imageUvToWorld(const cocos2d::Vec2& uv) const;
     void setZoom(float z);
     void setupInteraction();
+    virtual void update(float dt) override;
+    void setTimeScale(float s) { _timeScale = std::max(0.01f, s); }
 private:
-    struct PlacedBuilding { int id; int r; int c; cocos2d::Sprite* sprite; };
+    struct PlacedBuilding { int id; int r; int c; cocos2d::Sprite* sprite; std::shared_ptr<class Building> data; };
     std::vector<PlacedBuilding> _buildings;
     bool _moving = false;
     int _movingIndex = -1;
@@ -61,5 +65,9 @@ private:
 
 public:
     void setResourceUiScale(float s);
+private:
+    void openUpgradeWindowForIndex(int idx);
+    int getTownHallLevel() const;
+    float _timeScale = 1.0f;
  
-};
+ };
