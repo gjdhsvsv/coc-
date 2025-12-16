@@ -111,6 +111,12 @@ bool MainScene::init()
                     float sx = std::min(cw / s.width, ch / s.height);
                     it->setScale(sx);
                     item = it;
+                    int limit = buildLimitForId(idx);
+                    if (countById(idx) >= limit) {
+                        it->setEnabled(false);
+                        if (auto normal = it->getNormalImage()) normal->setColor(Color3B(150,150,150));
+                        if (auto selected = it->getSelectedImage()) selected->setColor(Color3B(150,150,150));
+                    }
                 }
                 else {
                     auto label = Label::createWithSystemFont(StringUtils::format("%d", idx), "Arial", 20);
@@ -120,6 +126,11 @@ bool MainScene::init()
                         });
                     it->setContentSize(Size(cw, ch));
                     item = it;
+                    int limit = buildLimitForId(idx);
+                    if (countById(idx) >= limit) {
+                        it->setEnabled(false);
+                        label->setColor(Color3B(150,150,150));
+                    }
                 }
                 item->setPosition(Vec2(x + cw * 0.5f, y + ch * 0.5f));
                 menu->addChild(item);
@@ -154,25 +165,25 @@ bool MainScene::init()
     _eventDispatcher->addEventListenerWithSceneGraphPriority(listener, this);
 
     //建筑大小接口
-    setBuildingScale(0.5f);
+    setBuildingScale(0.33f);
 
     setBuildingScaleForId(1, 0.4f);
-    setBuildingOffsetForId(1, Vec2(0, 10));
+    setBuildingOffsetForId(1, Vec2(0, 20/3));
 
-    setBuildingOffsetForId(2, Vec2(-1, 7));
+    setBuildingOffsetForId(2, Vec2(-2/3, 14/3));
 
-    setBuildingOffsetForId(3, Vec2(-5, 7));
+    setBuildingOffsetForId(3, Vec2(-10/3, 14/3));
 
-    setBuildingOffsetForId(4, Vec2(2, 2));
+    setBuildingOffsetForId(4, Vec2(4/3, 4/3));
 
     setBuildingScaleForId(7, 0.7f);
-    setBuildingOffsetForId(7, Vec2(-2, 0));
+    setBuildingOffsetForId(7, Vec2(-4/3, 0));
 
     setBuildingScaleForId(8, 1.3f);
-    setBuildingOffsetForId(8, Vec2(2, 5));
+    setBuildingOffsetForId(8, Vec2(4/3, 10/3));
 
     setBuildingScaleForId(9, 0.8f);
-    setBuildingOffsetForId(9, Vec2(2, 5));
+    setBuildingOffsetForId(9, Vec2(4/3, 10/3));
     int cr = _rows / 2;
     int cc = _cols / 2;
     if (canPlace(cr, cc)) placeBuilding(cr, cc, 9);
@@ -214,6 +225,27 @@ void MainScene::buildGrid()
             _grid->drawLine(left, top, lineColor);
         }
     }
+}
+
+int MainScene::countById(int id) const
+{
+    int n = 0;
+    for (const auto& b : _buildings) if (b.id == id) ++n;
+    return n;
+}
+int MainScene::buildLimitForId(int id) const
+{
+    int th = getTownHallLevel();
+    if (id == 3 || id == 5) {
+        if (th <= 1) return 1;
+        if (th == 2) return 2;
+        return 3;
+    }
+    if (id == 4 || id == 6) {
+        if (th <= 2) return 1;
+        return 2;
+    }
+    return 1;
 }
 
 void MainScene::setGridVisible(bool visible)
@@ -272,10 +304,10 @@ void MainScene::update(float dt)
         if (!pb.data) continue;
         if (auto ec = dynamic_cast<ElixirCollector*>(pb.data.get())) {
             ec->updateProduction(dt, _timeScale);
-            ec->manageCollectPrompt(this, pb.sprite);
+            ec->manageCollectPrompt(_world, pb.sprite);
         } else if (auto gm = dynamic_cast<GoldMine*>(pb.data.get())) {
             gm->updateProduction(dt, _timeScale);
-            gm->manageCollectPrompt(this, pb.sprite);
+            gm->manageCollectPrompt(_world, pb.sprite);
         }
     }
 }
@@ -330,6 +362,30 @@ void MainScene::openUpgradeWindowForIndex(int idx)
                     } else {
                         pb.data->hpMax = std::max(pb.data->hpMax, pb.data->hpMax);
                     }
+                } else if (pb.id == 4) {
+                    auto es = dynamic_cast<ElixirStorage*>(pb.data.get());
+                    if (es) {
+                        es->setupStats(pb.data->level);
+                        es->applyCap();
+                    } else {
+                        pb.data->hpMax = std::max(pb.data->hpMax, pb.data->hpMax);
+                    }
+                } else if (pb.id == 6) {
+                    auto gs = dynamic_cast<GoldStorage*>(pb.data.get());
+                    if (gs) {
+                        gs->setupStats(pb.data->level);
+                        gs->applyCap();
+                    } else {
+                        pb.data->hpMax = std::max(pb.data->hpMax, pb.data->hpMax);
+                    }
+                } else if (pb.id == 9) {
+                    auto th = dynamic_cast<TownHall*>(pb.data.get());
+                    if (th) {
+                        th->setupStats(pb.data->level);
+                        th->applyCap();
+                    } else {
+                        pb.data->hpMax = std::max(pb.data->hpMax, pb.data->hpMax);
+                    }
                 }
             }
         },
@@ -347,8 +403,8 @@ void MainScene::setupInteraction()
         auto ev = static_cast<EventMouse*>(e);
         float delta = ev->getScrollY();
         float k = 1.1f;
-        if (delta > 0) setZoom(_zoom * k);
-        else if (delta < 0) setZoom(_zoom / k);
+        if (delta > 0) setZoom(_zoom / k);
+        else if (delta < 0) setZoom(_zoom * k);
         };
     mouse->onMouseDown = [this](Event* e) {
         auto ev = static_cast<EventMouse*>(e);
@@ -398,11 +454,13 @@ void MainScene::setupInteraction()
                             _movingIndex = idx;
                             _hint->clear();
                         }
-                    }
-                    else {
+                    } else {
                         _dragging = true;
                         _lastMouse = Vec2(ev->getCursorX(), ev->getCursorY());
                     }
+                } else {
+                    _dragging = true;
+                    _lastMouse = Vec2(ev->getCursorX(), ev->getCursorY());
                 }
             }
         }
@@ -522,6 +580,9 @@ void MainScene::drawCellFilled(int r, int c, const Color4F& color, DrawNode* lay
 
 void MainScene::placeBuilding(int r, int c, int id)
 {
+    if (id >= 1 && id <= 9 && countById(id) >= buildLimitForId(id)) {
+        return;
+    }
     auto buildCost = ConfigManager::getBuildCost(id);
     if (buildCost.amount > 0) {
         bool ok = buildCost.useGold ? ResourceManager::spendGold(buildCost.amount)
@@ -558,11 +619,32 @@ void MainScene::placeBuilding(int r, int c, int id)
             ec->stored = 0.f;
         }
     }
+    if (id == 4) {
+        auto es = dynamic_cast<ElixirStorage*>(b.get());
+        if (es) {
+            es->setupStats(b->level);
+            es->applyCap();
+        }
+    }
     if (id == 5) {
         auto gm = dynamic_cast<GoldMine*>(b.get());
         if (gm) {
             gm->setupStats(b->level);
             gm->stored = 0.f;
+        }
+    }
+    if (id == 6) {
+        auto gs = dynamic_cast<GoldStorage*>(b.get());
+        if (gs) {
+            gs->setupStats(b->level);
+            gs->applyCap();
+        }
+    }
+    if (id == 9) {
+        auto th = dynamic_cast<TownHall*>(b.get());
+        if (th) {
+            th->setupStats(b->level);
+            th->applyCap();
         }
     }
     auto s = b->createSprite();

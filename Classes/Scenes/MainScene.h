@@ -30,8 +30,8 @@ private:
     void commitMove(int r, int c);
     void cancelMove();
     void buildGrid();
-    int _rows = 20;
-    int _cols = 20;
+    int _rows = 30;
+    int _cols = 30;
     float _tileW = 0.f;
     float _tileH = 0.f;
     cocos2d::Vec2 _anchor;
@@ -69,5 +69,7 @@ private:
     void openUpgradeWindowForIndex(int idx);
     int getTownHallLevel() const;
     float _timeScale = 1.0f;
+    int countById(int id) const;
+    int buildLimitForId(int id) const;
  
  };

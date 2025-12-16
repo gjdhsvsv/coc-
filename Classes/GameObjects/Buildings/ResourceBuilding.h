@@ -53,7 +53,26 @@ public:
         }
     }
 };
-class ElixirStorage : public Building { public: ElixirStorage() { image = "buildings/buildings4.png"; } };
+class ElixirStorage : public Building {
+public:
+    ElixirStorage() { image = "buildings/buildings4.png"; }
+    int capAdd = 0;
+    int capApplied = 0;
+    void setupStats(int level) {
+        auto st = ConfigManager::getElixirStorageStats(level);
+        capAdd = st.capAdd;
+        hpMax = st.hp;
+        if (hp > hpMax) hp = hpMax;
+    }
+    void applyCap() {
+        int currentCap = ResourceManager::getElixirCap();
+        int delta = capAdd - capApplied;
+        if (delta != 0) {
+            ResourceManager::setElixirCap(currentCap + delta);
+            capApplied = capAdd;
+        }
+    }
+};
 class GoldMine : public Building {
 public:
     GoldMine() { image = "buildings/buildings5.png"; }
@@ -103,4 +122,23 @@ public:
         }
     }
 };
-class GoldStorage : public Building { public: GoldStorage() { image = "buildings/buildings6.png"; } };
+class GoldStorage : public Building {
+public:
+    GoldStorage() { image = "buildings/buildings6.png"; }
+    int capAdd = 0;
+    int capApplied = 0;
+    void setupStats(int level) {
+        auto st = ConfigManager::getGoldStorageStats(level);
+        capAdd = st.capAdd;
+        hpMax = st.hp;
+        if (hp > hpMax) hp = hpMax;
+    }
+    void applyCap() {
+        int currentCap = ResourceManager::getGoldCap();
+        int delta = capAdd - capApplied;
+        if (delta != 0) {
+            ResourceManager::setGoldCap(currentCap + delta);
+            capApplied = capAdd;
+        }
+    }
+};
