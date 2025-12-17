@@ -26,3 +26,8 @@ public:
         return s;
     }
 };
+
+namespace BuildingFactory {
+    std::unique_ptr<Building> create(int id, int level);
+    void applyStats(Building* b, int id, int level);
+}

@@ -2,11 +2,11 @@
 #include <functional>
 
 struct Resources {
-    int elixir = 1000;
-    int gold = 1000;
+    int elixir = 5000;
+    int gold = 5000;
     int population = 0;
-    int elixirCap = 1000;
-    int goldCap = 1000;
+    int elixirCap = 5000;
+    int goldCap = 5000;
     int populationCap = 0;
 };
 

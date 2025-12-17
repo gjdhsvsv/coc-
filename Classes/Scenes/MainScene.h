@@ -65,11 +65,14 @@ private:
 
 public:
     void setResourceUiScale(float s);
+    void setBattleButtonScale(float s);
 private:
     void openUpgradeWindowForIndex(int idx);
     int getTownHallLevel() const;
     float _timeScale = 1.0f;
     int countById(int id) const;
     int buildLimitForId(int id) const;
- 
- };
+
+    cocos2d::MenuItemImage* _battleButton = nullptr;
+
+};

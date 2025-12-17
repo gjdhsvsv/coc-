@@ -1,4 +1,5 @@
 #include "Scenes/MainScene.h"
+#include "Scenes/BattleScene.h"
 #include "Managers/SoundManager.h"
 #include "UI/ResourcePanel.h"
 #include "UI/BuildingButton.h"
@@ -87,7 +88,7 @@ bool MainScene::init()
         }
         float margin = 20.f;
         Rect area(origin.x + margin, origin.y + margin, vs.width - margin * 2, vs.height - margin * 2 - titleH);
-        int cols = 4, rows = 2;
+        int cols = 5, rows = 2;
         float gap = 12.f;
         float cw = (area.size.width - gap * (cols - 1)) / cols;
         float ch = (area.size.height - gap * (rows - 1)) / rows;
@@ -104,32 +105,36 @@ bool MainScene::init()
                 MenuItem* item = nullptr;
                 if (FileUtils::getInstance()->isFileExist(path)) {
                     auto it = MenuItemImage::create(path, path, [this, idx, panel](Ref*) {
-                        startPlacement(idx);
+                        int buildId = (idx == 9 ? 10 : idx);
+                        startPlacement(buildId);
                         panel->removeFromParent();
                         });
                     Size s = it->getContentSize();
                     float sx = std::min(cw / s.width, ch / s.height);
                     it->setScale(sx);
                     item = it;
-                    int limit = buildLimitForId(idx);
-                    if (countById(idx) >= limit) {
+                    int buildId = (idx == 9 ? 10 : idx);
+                    int limit = buildLimitForId(buildId);
+                    if (countById(buildId) >= limit) {
                         it->setEnabled(false);
-                        if (auto normal = it->getNormalImage()) normal->setColor(Color3B(150,150,150));
-                        if (auto selected = it->getSelectedImage()) selected->setColor(Color3B(150,150,150));
+                        if (auto normal = it->getNormalImage()) normal->setColor(Color3B(150, 150, 150));
+                        if (auto selected = it->getSelectedImage()) selected->setColor(Color3B(150, 150, 150));
                     }
                 }
                 else {
                     auto label = Label::createWithSystemFont(StringUtils::format("%d", idx), "Arial", 20);
                     auto it = MenuItemLabel::create(label, [this, idx, panel](Ref*) {
-                        startPlacement(idx);
+                        int buildId = (idx == 9 ? 10 : idx);
+                        startPlacement(buildId);
                         panel->removeFromParent();
                         });
                     it->setContentSize(Size(cw, ch));
                     item = it;
-                    int limit = buildLimitForId(idx);
-                    if (countById(idx) >= limit) {
+                    int buildId = (idx == 9 ? 10 : idx);
+                    int limit = buildLimitForId(buildId);
+                    if (countById(buildId) >= limit) {
                         it->setEnabled(false);
-                        label->setColor(Color3B(150,150,150));
+                        label->setColor(Color3B(150, 150, 150));
                     }
                 }
                 item->setPosition(Vec2(x + cw * 0.5f, y + ch * 0.5f));
@@ -155,6 +160,18 @@ bool MainScene::init()
     this->addChild(resPanel, 45);
     this->scheduleUpdate();
 
+    auto battleItem = MenuItemImage::create("ui/battle_button.png", "ui/battle_button.png", [](Ref* sender) {
+        auto scene = BattleScene::createScene();
+        Director::getInstance()->replaceScene(TransitionFade::create(0.5f, scene));
+        });
+    _battleButton = battleItem;
+    if (_battleButton) {
+        setBattleButtonScale(0.065f);
+        auto battleMenu = Menu::create(_battleButton, nullptr);
+        battleMenu->setPosition(Vec2::ZERO);
+        this->addChild(battleMenu, 50);
+    }
+
     auto listener = EventListenerKeyboard::create();
     listener->onKeyPressed = [this](EventKeyboard::KeyCode code, Event*) {
         if (code == EventKeyboard::KeyCode::KEY_G) {
@@ -168,22 +185,24 @@ bool MainScene::init()
     setBuildingScale(0.33f);
 
     setBuildingScaleForId(1, 0.4f);
-    setBuildingOffsetForId(1, Vec2(0, 20/3));
+    setBuildingOffsetForId(1, Vec2(0, 20 / 3));
 
-    setBuildingOffsetForId(2, Vec2(-2/3, 14/3));
+    setBuildingOffsetForId(2, Vec2(-2 / 3, 14 / 3));
 
-    setBuildingOffsetForId(3, Vec2(-10/3, 14/3));
+    setBuildingOffsetForId(3, Vec2(-10 / 3, 14 / 3));
 
-    setBuildingOffsetForId(4, Vec2(4/3, 4/3));
+    setBuildingOffsetForId(4, Vec2(4 / 3, 4 / 3));
 
     setBuildingScaleForId(7, 0.7f);
-    setBuildingOffsetForId(7, Vec2(-4/3, 0));
+    setBuildingOffsetForId(7, Vec2(-4 / 3, 0));
 
     setBuildingScaleForId(8, 1.3f);
-    setBuildingOffsetForId(8, Vec2(4/3, 10/3));
+    setBuildingOffsetForId(8, Vec2(4 / 3, 10 / 3));
 
     setBuildingScaleForId(9, 0.8f);
-    setBuildingOffsetForId(9, Vec2(4/3, 10/3));
+    setBuildingOffsetForId(9, Vec2(4 / 3, 10 / 3));
+    setBuildingScaleForId(10, 0.8f);
+    setBuildingOffsetForId(10, Vec2(0, 4 / 3));
     int cr = _rows / 2;
     int cc = _cols / 2;
     if (canPlace(cr, cc)) placeBuilding(cr, cc, 9);
@@ -235,17 +254,7 @@ int MainScene::countById(int id) const
 }
 int MainScene::buildLimitForId(int id) const
 {
-    int th = getTownHallLevel();
-    if (id == 3 || id == 5) {
-        if (th <= 1) return 1;
-        if (th == 2) return 2;
-        return 3;
-    }
-    if (id == 4 || id == 6) {
-        if (th <= 2) return 1;
-        return 2;
-    }
-    return 1;
+    return ConfigManager::getBuildLimit(id, getTownHallLevel());
 }
 
 void MainScene::setGridVisible(bool visible)
@@ -288,14 +297,7 @@ void MainScene::setZoom(float z)
     if (_world) _world->setScale(_zoom);
     clampWorld();
 }
-void MainScene::setResourceUiScale(float s)
-{
-    auto n = this->getChildByName("ResourcePanel");
-    if (n) {
-        auto panel = dynamic_cast<ResourcePanel*>(n);
-        if (panel) panel->setPanelScale(s);
-    }
-}
+
 
 void MainScene::update(float dt)
 {
@@ -305,7 +307,8 @@ void MainScene::update(float dt)
         if (auto ec = dynamic_cast<ElixirCollector*>(pb.data.get())) {
             ec->updateProduction(dt, _timeScale);
             ec->manageCollectPrompt(_world, pb.sprite);
-        } else if (auto gm = dynamic_cast<GoldMine*>(pb.data.get())) {
+        }
+        else if (auto gm = dynamic_cast<GoldMine*>(pb.data.get())) {
             gm->updateProduction(dt, _timeScale);
             gm->manageCollectPrompt(_world, pb.sprite);
         }
@@ -330,7 +333,13 @@ void MainScene::openUpgradeWindowForIndex(int idx)
     auto cost = ConfigManager::getUpgradeCost(b.id, nextLv);
     int thLevel = getTownHallLevel();
     bool isMax = (curLv >= ConfigManager::getMaxLevel());
-    bool disabled = isMax || (b.id != 9 && nextLv > thLevel);
+    int maxBk = 0;
+    for (const auto& it : _buildings) {
+        if (it.id == 7 && it.data) {
+            maxBk = std::max(maxBk, it.data->level);
+        }
+    }
+    bool disabled = isMax || !ConfigManager::isUpgradeAllowed(b.id, nextLv, thLevel, maxBk);
     std::string title = cocos2d::StringUtils::format("%s (Level %d)", ConfigManager::getBuildingName(b.id).c_str(), curLv);
     std::string resName = cost.useGold ? "Gold" : "Elixir";
     auto modal = CustomButton::createUpgradePanel(title, resName, cost.amount, disabled, isMax,
@@ -339,54 +348,22 @@ void MainScene::openUpgradeWindowForIndex(int idx)
             if (!pb.data) return;
             int curLv2 = pb.data->level;
             if (curLv2 >= ConfigManager::getMaxLevel()) { return; }
-            if (pb.id != 9) {
+            {
                 int th = getTownHallLevel();
-                if (nextLv > th) return;
+                int maxBk2 = 0;
+                for (const auto& it : _buildings) {
+                    if (it.id == 7 && it.data) {
+                        maxBk2 = std::max(maxBk2, it.data->level);
+                    }
+                }
+                if (!ConfigManager::isUpgradeAllowed(pb.id, nextLv, th, maxBk2)) return;
             }
             bool ok = false;
             if (cost.useGold) ok = ResourceManager::spendGold(cost.amount);
             else ok = ResourceManager::spendElixir(cost.amount);
             if (ok) {
                 pb.data->level = curLv2 + 1;
-                if (pb.id == 3) {
-                    auto ec = dynamic_cast<ElixirCollector*>(pb.data.get());
-                    if (ec) {
-                        ec->setupStats(pb.data->level);
-                    } else {
-                        pb.data->hpMax = std::max(pb.data->hpMax, pb.data->hpMax); // no-op safeguard
-                    }
-                } else if (pb.id == 5) {
-                    auto gm = dynamic_cast<GoldMine*>(pb.data.get());
-                    if (gm) {
-                        gm->setupStats(pb.data->level);
-                    } else {
-                        pb.data->hpMax = std::max(pb.data->hpMax, pb.data->hpMax);
-                    }
-                } else if (pb.id == 4) {
-                    auto es = dynamic_cast<ElixirStorage*>(pb.data.get());
-                    if (es) {
-                        es->setupStats(pb.data->level);
-                        es->applyCap();
-                    } else {
-                        pb.data->hpMax = std::max(pb.data->hpMax, pb.data->hpMax);
-                    }
-                } else if (pb.id == 6) {
-                    auto gs = dynamic_cast<GoldStorage*>(pb.data.get());
-                    if (gs) {
-                        gs->setupStats(pb.data->level);
-                        gs->applyCap();
-                    } else {
-                        pb.data->hpMax = std::max(pb.data->hpMax, pb.data->hpMax);
-                    }
-                } else if (pb.id == 9) {
-                    auto th = dynamic_cast<TownHall*>(pb.data.get());
-                    if (th) {
-                        th->setupStats(pb.data->level);
-                        th->applyCap();
-                    } else {
-                        pb.data->hpMax = std::max(pb.data->hpMax, pb.data->hpMax);
-                    }
-                }
+                BuildingFactory::applyStats(pb.data.get(), pb.id, pb.data->level);
             }
         },
         []() {}
@@ -394,7 +371,7 @@ void MainScene::openUpgradeWindowForIndex(int idx)
     this->addChild(modal, 100);
 }
 
- 
+
 
 void MainScene::setupInteraction()
 {
@@ -414,8 +391,16 @@ void MainScene::setupInteraction()
             int r = (int)std::round(ij.x);
             int c = (int)std::round(ij.y);
             if (_placing) {
-                if (canPlace(r, c)) placeBuilding(r, c, _placingId);
-                cancelPlacement();
+                if (canPlace(r, c)) {
+                    placeBuilding(r, c, _placingId);
+                    if (_placingId == 10) {
+                        int limit = buildLimitForId(10);
+                        if (countById(10) >= limit) cancelPlacement();
+                    }
+                    else {
+                        cancelPlacement();
+                    }
+                }
             }
             else if (_moving) {
                 if (canPlaceIgnoring(r, c, _movingIndex)) commitMove(r, c);
@@ -454,11 +439,13 @@ void MainScene::setupInteraction()
                             _movingIndex = idx;
                             _hint->clear();
                         }
-                    } else {
+                    }
+                    else {
                         _dragging = true;
                         _lastMouse = Vec2(ev->getCursorX(), ev->getCursorY());
                     }
-                } else {
+                }
+                else {
                     _dragging = true;
                     _lastMouse = Vec2(ev->getCursorX(), ev->getCursorY());
                 }
@@ -489,11 +476,19 @@ void MainScene::setupInteraction()
             Vec2 ij = worldToGrid(cur);
             int r = (int)std::round(ij.x);
             int c = (int)std::round(ij.y);
-            for (int dr = -1; dr <= 1; ++dr) {
-                for (int dc = -1; dc <= 1; ++dc) {
-                    int rr = r + dr, cc = c + dc;
-                    if (rr >= 0 && rr < _rows && cc >= 0 && cc < _cols)
-                        drawCellFilled(rr, cc, Color4F(0.3f, 0.9f, 0.3f, 0.35f), _hint);
+            if (_placingId == 10) {
+                bool ok = canPlace(r, c);
+                Color4F col = ok ? Color4F(0.3f, 0.9f, 0.3f, 0.35f) : Color4F(0.9f, 0.3f, 0.3f, 0.35f);
+                if (r >= 0 && r < _rows && c >= 0 && c < _cols)
+                    drawCellFilled(r, c, col, _hint);
+            }
+            else {
+                for (int dr = -1; dr <= 1; ++dr) {
+                    for (int dc = -1; dc <= 1; ++dc) {
+                        int rr = r + dr, cc = c + dc;
+                        if (rr >= 0 && rr < _rows && cc >= 0 && cc < _cols)
+                            drawCellFilled(rr, cc, Color4F(0.3f, 0.9f, 0.3f, 0.35f), _hint);
+                    }
                 }
             }
         }
@@ -560,11 +555,17 @@ void MainScene::cancelPlacement()
 
 bool MainScene::canPlace(int r, int c) const
 {
-    if (r < 1 || r > _rows - 2 || c < 1 || c > _cols - 2) return false;
-    for (int dr = -1; dr <= 1; ++dr)
-        for (int dc = -1; dc <= 1; ++dc)
-            if (_occupy[r + dr][c + dc] != 0) return false;
-    return true;
+    if (_placing && _placingId == 10) {
+        if (r < 0 || r >= _rows || c < 0 || c >= _cols) return false;
+        return _occupy[r][c] == 0;
+    }
+    else {
+        if (r < 1 || r > _rows - 2 || c < 1 || c > _cols - 2) return false;
+        for (int dr = -1; dr <= 1; ++dr)
+            for (int dc = -1; dc <= 1; ++dc)
+                if (_occupy[r + dr][c + dc] != 0) return false;
+        return true;
+    }
 }
 
 void MainScene::drawCellFilled(int r, int c, const Color4F& color, DrawNode* layer)
@@ -580,73 +581,29 @@ void MainScene::drawCellFilled(int r, int c, const Color4F& color, DrawNode* lay
 
 void MainScene::placeBuilding(int r, int c, int id)
 {
-    if (id >= 1 && id <= 9 && countById(id) >= buildLimitForId(id)) {
+    if (id >= 1 && id <= 10 && countById(id) >= buildLimitForId(id)) {
         return;
     }
     auto buildCost = ConfigManager::getBuildCost(id);
     if (buildCost.amount > 0) {
         bool ok = buildCost.useGold ? ResourceManager::spendGold(buildCost.amount)
-                                    : ResourceManager::spendElixir(buildCost.amount);
+            : ResourceManager::spendElixir(buildCost.amount);
         if (!ok) return;
     }
-    for (int dr = -1; dr <= 1; ++dr)
-        for (int dc = -1; dc <= 1; ++dc)
-            _occupy[r + dr][c + dc] = id;
-    for (int dr = -1; dr <= 1; ++dr)
-        for (int dc = -1; dc <= 1; ++dc)
-            drawCellFilled(r + dr, c + dc, Color4F(0.2f, 0.8f, 0.2f, 0.6f), _occupied);
+    if (id == 10) {
+        _occupy[r][c] = id;
+        drawCellFilled(r, c, Color4F(0.2f, 0.8f, 0.2f, 0.6f), _occupied);
+    }
+    else {
+        for (int dr = -1; dr <= 1; ++dr)
+            for (int dc = -1; dc <= 1; ++dc)
+                _occupy[r + dr][c + dc] = id;
+        for (int dr = -1; dr <= 1; ++dr)
+            for (int dc = -1; dc <= 1; ++dc)
+                drawCellFilled(r + dr, c + dc, Color4F(0.2f, 0.8f, 0.2f, 0.6f), _occupied);
+    }
 
-    std::unique_ptr<Building> b;
-    switch (id) {
-        case 1: b.reset(new ArrowTower()); break;
-        case 2: b.reset(new Cannon()); break;
-        case 3: b.reset(new ElixirCollector()); break;
-        case 4: b.reset(new ElixirStorage()); break;
-        case 5: b.reset(new GoldMine()); break;
-        case 6: b.reset(new GoldStorage()); break;
-        case 7: b.reset(new Barracks()); break;
-        case 8: b.reset(new TrainingCamp()); break;
-        case 9: b.reset(new TownHall()); break;
-        default: b.reset(new Building()); break;
-    }
-    b->hpMax = 100;
-    b->hp = 100;
-    b->level = 1;
-    if (id == 3) {
-        auto ec = dynamic_cast<ElixirCollector*>(b.get());
-        if (ec) {
-            ec->setupStats(b->level);
-            ec->stored = 0.f;
-        }
-    }
-    if (id == 4) {
-        auto es = dynamic_cast<ElixirStorage*>(b.get());
-        if (es) {
-            es->setupStats(b->level);
-            es->applyCap();
-        }
-    }
-    if (id == 5) {
-        auto gm = dynamic_cast<GoldMine*>(b.get());
-        if (gm) {
-            gm->setupStats(b->level);
-            gm->stored = 0.f;
-        }
-    }
-    if (id == 6) {
-        auto gs = dynamic_cast<GoldStorage*>(b.get());
-        if (gs) {
-            gs->setupStats(b->level);
-            gs->applyCap();
-        }
-    }
-    if (id == 9) {
-        auto th = dynamic_cast<TownHall*>(b.get());
-        if (th) {
-            th->setupStats(b->level);
-            th->applyCap();
-        }
-    }
+    auto b = BuildingFactory::create(id, 1);
     auto s = b->createSprite();
     Vec2 center(_anchor.x + (c - r) * (_tileW * 0.5f), _anchor.y - (c + r) * (_tileH * 0.5f));
     int idx = std::max(1, std::min(9, id));
@@ -677,18 +634,42 @@ void MainScene::setBuildingOffsetForId(int id, const Vec2& off)
     _buildingOffsetById[id] = off;
 }
 
+void MainScene::setBattleButtonScale(float s)
+{
+    if (!_battleButton) return;
+    _battleButton->setScale(s);
+    auto visibleSize = Director::getInstance()->getVisibleSize();
+    Vec2 origin = Director::getInstance()->getVisibleOrigin();
+    float margin = 20.0f;
+    Size size = _battleButton->getContentSize();
+    float x = origin.x + size.width * s * 0.5f + margin;
+    float y = origin.y + size.height * s * 0.5f + margin;
+    _battleButton->setPosition(Vec2(x, y));
+}
+
 bool MainScene::canPlaceIgnoring(int r, int c, int ignoreIndex) const
 {
-    if (r < 1 || r > _rows - 2 || c < 1 || c > _cols - 2) return false;
-    int br = _buildings[ignoreIndex].r;
-    int bc = _buildings[ignoreIndex].c;
-    for (int dr = -1; dr <= 1; ++dr)
-        for (int dc = -1; dc <= 1; ++dc) {
-            int rr = r + dr, cc = c + dc;
-            bool inOld = std::abs(rr - br) <= 1 && std::abs(cc - bc) <= 1;
-            if (!inOld && _occupy[rr][cc] != 0) return false;
-        }
-    return true;
+    int movingId = _buildings[ignoreIndex].id;
+    if (movingId == 10) {
+        if (r < 0 || r >= _rows || c < 0 || c >= _cols) return false;
+        int br = _buildings[ignoreIndex].r;
+        int bc = _buildings[ignoreIndex].c;
+        bool inOld = (r == br && c == bc);
+        if (!inOld && _occupy[r][c] != 0) return false;
+        return true;
+    }
+    else {
+        if (r < 1 || r > _rows - 2 || c < 1 || c > _cols - 2) return false;
+        int br = _buildings[ignoreIndex].r;
+        int bc = _buildings[ignoreIndex].c;
+        for (int dr = -1; dr <= 1; ++dr)
+            for (int dc = -1; dc <= 1; ++dc) {
+                int rr = r + dr, cc = c + dc;
+                bool inOld = std::abs(rr - br) <= 1 && std::abs(cc - bc) <= 1;
+                if (!inOld && _occupy[rr][cc] != 0) return false;
+            }
+        return true;
+    }
 }
 
 int MainScene::findBuildingCenter(int r, int c) const
@@ -703,21 +684,32 @@ void MainScene::redrawOccupied()
 {
     if (_occupied) _occupied->clear();
     for (const auto& b : _buildings) {
-        for (int dr = -1; dr <= 1; ++dr)
-            for (int dc = -1; dc <= 1; ++dc)
-                drawCellFilled(b.r + dr, b.c + dc, Color4F(0.2f, 0.8f, 0.2f, 0.6f), _occupied);
+        if (b.id == 10) {
+            drawCellFilled(b.r, b.c, Color4F(0.2f, 0.8f, 0.2f, 0.6f), _occupied);
+        }
+        else {
+            for (int dr = -1; dr <= 1; ++dr)
+                for (int dc = -1; dc <= 1; ++dc)
+                    drawCellFilled(b.r + dr, b.c + dc, Color4F(0.2f, 0.8f, 0.2f, 0.6f), _occupied);
+        }
     }
 }
 
 void MainScene::commitMove(int r, int c)
 {
     auto& b = _buildings[_movingIndex];
-    for (int dr = -1; dr <= 1; ++dr)
-        for (int dc = -1; dc <= 1; ++dc)
-            _occupy[b.r + dr][b.c + dc] = 0;
-    for (int dr = -1; dr <= 1; ++dr)
-        for (int dc = -1; dc <= 1; ++dc)
-            _occupy[r + dr][c + dc] = b.id;
+    if (b.id == 10) {
+        _occupy[b.r][b.c] = 0;
+        _occupy[r][c] = b.id;
+    }
+    else {
+        for (int dr = -1; dr <= 1; ++dr)
+            for (int dc = -1; dc <= 1; ++dc)
+                _occupy[b.r + dr][b.c + dc] = 0;
+        for (int dr = -1; dr <= 1; ++dr)
+            for (int dc = -1; dc <= 1; ++dc)
+                _occupy[r + dr][c + dc] = b.id;
+    }
     Vec2 center(_anchor.x + (c - r) * (_tileW * 0.5f), _anchor.y - (c + r) * (_tileH * 0.5f));
     int idx = std::max(1, std::min(9, b.id));
     Vec2 off = _buildingOffsetById[idx];
