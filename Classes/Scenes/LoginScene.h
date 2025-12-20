@@ -1,5 +1,6 @@
 #pragma once
 #include "cocos2d.h"
+#include "ui/CocosGUI.h"
 
 class LoginScene : public cocos2d::Scene
 {
@@ -10,4 +11,10 @@ public:
 
 private:
     void openSettings();
+    void buildSaveUI();
+    void refreshSaveList();
+
+    cocos2d::LayerColor* _saveMask = nullptr;
+    cocos2d::ui::ScrollView* _saveScroll = nullptr;
+    cocos2d::Node* _saveContent = nullptr;
 };

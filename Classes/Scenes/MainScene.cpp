@@ -1,6 +1,9 @@
 #include "Scenes/MainScene.h"
 #include "Scenes/BattleScene.h"
-#include "Scenes/LoginScene.h"
+#include "Scenes/MenuScene.h"
+#include "Data/SaveSystem.h"
+#include "Managers/ConfigManager.h"
+#include "Managers/ResourceManager.h"
 #include "Managers/SoundManager.h"
 #include "UI/ResourcePanel.h"
 #include "UI/BuildingButton.h"
@@ -12,6 +15,7 @@
 #include "GameObjects/Buildings/TownHall.h"
 #include <memory>
 #include <cmath>
+#include <algorithm>
 
 #include "ui/CocosGUI.h"
 
@@ -167,9 +171,8 @@ bool MainScene::init()
     this->addChild(resPanel, 45);
     this->scheduleUpdate();
 
-    auto battleItem = MenuItemImage::create("ui/battle_button.png", "ui/battle_button.png", [](Ref* sender) {
-        auto scene = BattleScene::createScene();
-        Director::getInstance()->replaceScene(TransitionFade::create(0.5f, scene));
+    auto battleItem = MenuItemImage::create("ui/battle_button.png", "ui/battle_button.png", [this](Ref* sender) {
+        this->openAttackTargetPicker();
         });
     _battleButton = battleItem;
     if (_battleButton) {
@@ -221,9 +224,7 @@ bool MainScene::init()
     setBuildingOffsetForId(9, Vec2(4 / 3, 10 / 3));
     setBuildingScaleForId(10, 0.8f);
     setBuildingOffsetForId(10, Vec2(0, 4 / 3));
-    int cr = _rows / 2;
-    int cc = _cols / 2;
-    if (canPlace(cr, cc)) placeBuilding(cr, cc, 9);
+    loadFromCurrentSaveOrCreate();
 
     return true;
 }
@@ -273,7 +274,7 @@ void MainScene::openEscMenu()
         // Close menu before switching scenes.
         closeEscMenu();
         Director::getInstance()->replaceScene(
-            TransitionFade::create(0.35f, LoginScene::createScene())
+            TransitionFade::create(0.35f, MenuScene::createScene())
         );
         });
 
@@ -506,7 +507,19 @@ void MainScene::setZoom(float z)
     if (_world) _world->setScale(_zoom);
     clampWorld();
 }
-
+void MainScene::setTimeScale(float s)
+{
+    float clamped = std::max(0.01f, s);
+    if (std::fabs(clamped - _timeScale) > 1e-4f)
+    {
+        _timeScale = clamped;
+        _saveDirty = true;
+    }
+    else
+    {
+        _timeScale = clamped;
+    }
+}
 
 void MainScene::update(float dt)
 {
@@ -514,16 +527,30 @@ void MainScene::update(float dt)
         auto& pb = _buildings[i];
         if (!pb.data) continue;
         if (auto ec = dynamic_cast<ElixirCollector*>(pb.data.get())) {
+            float before = ec->stored;
             ec->updateProduction(dt, _timeScale);
+            if (std::fabs(ec->stored - before) > 1e-3f) _saveDirty = true;
             ec->manageCollectPrompt(_world, pb.sprite);
         }
         else if (auto gm = dynamic_cast<GoldMine*>(pb.data.get())) {
+            float before = gm->stored;
             gm->updateProduction(dt, _timeScale);
+            if (std::fabs(gm->stored - before) > 1e-3f) _saveDirty = true;
             gm->manageCollectPrompt(_world, pb.sprite);
         }
     }
+    _autosaveTimer += dt;
+    if (_autosaveTimer >= 2.0f)
+    {
+        saveToCurrentSlot(false);
+        _autosaveTimer = 0.0f;
+    }
 }
-#include "Managers/ConfigManager.h"
+void MainScene::onExit()
+{
+    saveToCurrentSlot(true);
+    Scene::onExit();
+}
 
 int MainScene::getTownHallLevel() const
 {
@@ -573,6 +600,7 @@ void MainScene::openUpgradeWindowForIndex(int idx)
             if (ok) {
                 pb.data->level = curLv2 + 1;
                 BuildingFactory::applyStats(pb.data.get(), pb.id, pb.data->level);
+                _saveDirty = true;
             }
         },
         []() {}
@@ -625,6 +653,7 @@ void MainScene::setupInteraction()
                             bool canCollect = ec->canCollect();
                             if (canCollect) {
                                 int deliver = ec->collect();
+                                if (deliver > 0) _saveDirty = true;
                             }
                             else {
                                 _moving = true;
@@ -636,6 +665,7 @@ void MainScene::setupInteraction()
                             bool canCollect = gm->canCollect();
                             if (canCollect) {
                                 int deliver = gm->collect();
+                                if (deliver > 0) _saveDirty = true;
                             }
                             else {
                                 _moving = true;
@@ -822,6 +852,7 @@ void MainScene::placeBuilding(int r, int c, int id)
     _world->addChild(s, 3);
     std::shared_ptr<Building> ptr(b.release());
     _buildings.push_back({ id, r, c, s, ptr });
+    _saveDirty = true;
 }
 
 void MainScene::setBuildingScale(float s)
@@ -925,6 +956,7 @@ void MainScene::commitMove(int r, int c)
     if (b.sprite) b.sprite->setPosition(center + off);
     b.r = r; b.c = c;
     redrawOccupied();
+    _saveDirty = true;
 }
 
 void MainScene::cancelMove()
@@ -932,4 +964,258 @@ void MainScene::cancelMove()
     _moving = false;
     _movingIndex = -1;
     if (_hint) _hint->clear();
+}
+void MainScene::loadFromCurrentSaveOrCreate()
+{
+    int slot = SaveSystem::getCurrentSlot();
+    if (slot < 0 || slot >= 20)
+    {
+        slot = 0;
+        SaveSystem::setCurrentSlot(0);
+    }
+
+    SaveData data;
+    bool loaded = SaveSystem::load(slot, data);
+    if (!loaded)
+    {
+        std::string defName = StringUtils::format("Save %02d", slot + 1);
+        data = SaveSystem::makeDefault(slot, defName);
+        SaveSystem::save(data);
+    }
+
+    for (auto& b : _buildings)
+    {
+        if (b.sprite) b.sprite->removeFromParent();
+    }
+    _buildings.clear();
+    _occupy.assign(_rows, std::vector<int>(_cols, 0));
+    if (_occupied) _occupied->clear();
+
+    ResourceManager::reset();
+    _timeScale = data.timeScale > 0.0f ? data.timeScale : 1.0f;
+
+    for (const auto& b : data.buildings)
+    {
+        placeBuildingLoaded(b.r, b.c, b);
+    }
+
+    if (_buildings.empty())
+    {
+        SaveBuilding th;
+        th.id = 9;
+        th.level = 1;
+        th.r = _rows / 2;
+        th.c = _cols / 2;
+        th.hp = 100;
+        th.stored = 0.0f;
+        placeBuildingLoaded(th.r, th.c, th);
+        data.buildings.clear();
+        data.buildings.push_back(th);
+        SaveSystem::save(data);
+    }
+
+    ResourceManager::setGold(data.gold);
+    ResourceManager::setElixir(data.elixir);
+    ResourceManager::setPopulation(data.population);
+
+    _saveDirty = false;
+    _autosaveTimer = 0.0f;
+}
+
+void MainScene::saveToCurrentSlot(bool force)
+{
+    int slot = SaveSystem::getCurrentSlot();
+    if (slot < 0 || slot >= 20)
+    {
+        slot = 0;
+        SaveSystem::setCurrentSlot(0);
+    }
+
+    if (!force && !_saveDirty) return;
+
+    SaveData data;
+    data.slot = slot;
+    SaveData prev;
+    if (SaveSystem::load(slot, prev)) data.name = prev.name;
+    else data.name = StringUtils::format("Save %02d", slot + 1);
+
+    data.gold = ResourceManager::getGold();
+    data.elixir = ResourceManager::getElixir();
+    data.population = ResourceManager::getPopulation();
+    data.timeScale = _timeScale;
+
+    for (const auto& b : _buildings)
+    {
+        SaveBuilding sb;
+        sb.id = b.id;
+        sb.r = b.r;
+        sb.c = b.c;
+        if (b.data)
+        {
+            sb.level = b.data->level;
+            sb.hp = b.data->hp;
+            sb.stored = b.data->stored;
+        }
+        data.buildings.push_back(sb);
+    }
+
+    if (SaveSystem::save(data))
+    {
+        _saveDirty = false;
+    }
+}
+
+void MainScene::placeBuildingLoaded(int r, int c, const SaveBuilding& info)
+{
+    if (info.id <= 0) return;
+
+    if (info.id == 10)
+    {
+        if (r < 0 || r >= _rows || c < 0 || c >= _cols) return;
+        if (_occupy[r][c] != 0) return;
+        _occupy[r][c] = info.id;
+        drawCellFilled(r, c, Color4F(0.2f, 0.8f, 0.2f, 0.6f), _occupied);
+    }
+    else
+    {
+        if (r < 1 || r > _rows - 2 || c < 1 || c > _cols - 2) return;
+        for (int dr = -1; dr <= 1; ++dr)
+            for (int dc = -1; dc <= 1; ++dc)
+                if (_occupy[r + dr][c + dc] != 0) return;
+        for (int dr = -1; dr <= 1; ++dr)
+            for (int dc = -1; dc <= 1; ++dc)
+                _occupy[r + dr][c + dc] = info.id;
+        for (int dr = -1; dr <= 1; ++dr)
+            for (int dc = -1; dc <= 1; ++dc)
+                drawCellFilled(r + dr, c + dc, Color4F(0.2f, 0.8f, 0.2f, 0.6f), _occupied);
+    }
+
+    auto b = BuildingFactory::create(info.id, std::max(1, info.level));
+    if (!b) return;
+    b->level = std::max(1, info.level);
+    if (info.hp > 0) b->hp = std::min(info.hp, b->hpMax);
+    b->stored = info.stored;
+    auto s = b->createSprite();
+    Vec2 center(_anchor.x + (c - r) * (_tileW * 0.5f), _anchor.y - (c + r) * (_tileH * 0.5f));
+    int idx = std::max(1, std::min(9, info.id));
+    Vec2 off = _buildingOffsetById[idx];
+    s->setPosition(center + off);
+    s->setScale(_buildingScale * _buildingScaleById[idx]);
+    _world->addChild(s, 3);
+    std::shared_ptr<Building> ptr(b.release());
+    _buildings.push_back({ info.id, r, c, s, ptr });
+}
+
+void MainScene::openAttackTargetPicker()
+{
+    if (_attackMask) return;
+
+    auto visibleSize = Director::getInstance()->getVisibleSize();
+    auto origin = Director::getInstance()->getVisibleOrigin();
+
+    _attackMask = LayerColor::create(Color4B(0, 0, 0, 180));
+    this->addChild(_attackMask, 250);
+
+    auto maskListener = EventListenerTouchOneByOne::create();
+    maskListener->setSwallowTouches(true);
+    maskListener->onTouchBegan = [](Touch*, Event*) { return true; };
+    _eventDispatcher->addEventListenerWithSceneGraphPriority(maskListener, _attackMask);
+
+    const float panelW = 640.0f;
+    const float panelH = 520.0f;
+    auto panel = LayerColor::create(Color4B(70, 70, 70, 255), panelW, panelH);
+    panel->setPosition(origin.x + visibleSize.width / 2 - panelW / 2,
+        origin.y + visibleSize.height / 2 - panelH / 2);
+    _attackMask->addChild(panel);
+
+    auto panelListener = EventListenerTouchOneByOne::create();
+    panelListener->setSwallowTouches(true);
+    panelListener->onTouchBegan = [](Touch*, Event*) { return true; };
+    _eventDispatcher->addEventListenerWithSceneGraphPriority(panelListener, panel);
+
+    auto title = Label::createWithSystemFont("Choose Target", "Arial", 48);
+    title->setPosition(Vec2(panelW / 2, panelH - 50));
+    panel->addChild(title);
+
+    auto metas = SaveSystem::listAllSlots();
+    std::vector<SaveMeta> targets;
+    for (const auto& m : metas)
+    {
+        if (m.exists && m.slot != SaveSystem::getCurrentSlot())
+        {
+            targets.push_back(m);
+        }
+    }
+
+    auto scroll = ui::ScrollView::create();
+    scroll->setDirection(ui::ScrollView::Direction::VERTICAL);
+    scroll->setContentSize(Size(panelW - 40, panelH - 140));
+    scroll->setAnchorPoint(Vec2(0.5f, 0.5f));
+    scroll->setPosition(Vec2(panelW / 2, panelH / 2 - 30));
+    scroll->setScrollBarEnabled(true);
+    panel->addChild(scroll);
+
+    auto container = Node::create();
+    scroll->addChild(container);
+
+    if (targets.empty())
+    {
+        scroll->setInnerContainerSize(scroll->getContentSize());
+        container->setPosition(Vec2(scroll->getContentSize().width * 0.5f, scroll->getContentSize().height * 0.5f));
+        auto emptyLabel = Label::createWithSystemFont("No target selected", "Arial", 32);
+        emptyLabel->setPosition(Vec2(panelW / 2, panelH / 2 - 20));
+        panel->addChild(emptyLabel, 1);
+    }
+    else
+    {
+        const float rowH = 60.0f;
+        float innerH = std::max(scroll->getContentSize().height, rowH * targets.size());
+        scroll->setInnerContainerSize(Size(scroll->getContentSize().width, innerH));
+        container->setPosition(Vec2(scroll->getContentSize().width * 0.5f, innerH));
+        for (size_t i = 0; i < targets.size(); ++i)
+        {
+            const auto& meta = targets[i];
+            float y = innerH - rowH * (i + 0.5f);
+            auto rowBg = LayerColor::create(Color4B(90, 90, 90, 255), scroll->getContentSize().width, rowH - 6);
+            rowBg->setAnchorPoint(Vec2(0.5f, 0.5f));
+            rowBg->setPosition(Vec2(scroll->getContentSize().width * 0.5f, y));
+            container->addChild(rowBg);
+
+            std::string labelText = StringUtils::format("[%02d] %s", meta.slot + 1, meta.name.c_str());
+            auto label = Label::createWithSystemFont(labelText, "Arial", 30);
+            label->setAnchorPoint(Vec2(0.0f, 0.5f));
+            label->setPosition(Vec2(20, rowH * 0.5f));
+            rowBg->addChild(label);
+
+            auto attackLabel = Label::createWithSystemFont("Attack", "Arial", 26);
+            auto attackItem = MenuItemLabel::create(attackLabel, [this, meta](Ref*) {
+                SaveSystem::setBattleTargetSlot(meta.slot);
+                closeAttackTargetPicker();
+                auto scene = BattleScene::createScene();
+                Director::getInstance()->replaceScene(TransitionFade::create(0.5f, scene));
+                });
+            attackItem->setPosition(Vec2(rowBg->getContentSize().width - 100, rowH * 0.5f));
+            auto menu = Menu::create(attackItem, nullptr);
+            menu->setPosition(Vec2::ZERO);
+            rowBg->addChild(menu);
+        }
+    }
+
+    auto closeLabel = Label::createWithSystemFont("X", "Arial", 36);
+    auto closeItem = MenuItemLabel::create(closeLabel, [this](Ref*) {
+        closeAttackTargetPicker();
+        });
+    closeItem->setPosition(Vec2(panelW - 30, panelH - 30));
+    auto closeMenu = Menu::create(closeItem, nullptr);
+    closeMenu->setPosition(Vec2::ZERO);
+    panel->addChild(closeMenu, 2);
+}
+
+void MainScene::closeAttackTargetPicker()
+{
+    if (_attackMask)
+    {
+        _attackMask->removeFromParent();
+        _attackMask = nullptr;
+    }
 }

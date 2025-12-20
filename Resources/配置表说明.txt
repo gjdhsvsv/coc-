@@ -1,0 +1,13 @@
+unit.json缩写说明：
+PT=Preferred Target
+AT=Attack Type
+HS=Housing Space
+MS=Movement Speed
+AS=Attack Speed
+BLR=Barracks Level Required  （就是研发需要的Barracks等级）
+DPS=Damage per Second
+DPA=Damage per Attack
+HP=Hitpoint
+RC=Research Cost (就是圣水花费)
+RT=Research Time
+LLR=Laboratory Level Required  (就是研发需要的实验室花费)

@@ -1,6 +1,8 @@
 #include "Scenes/BattleScene.h"
 #include "Scenes/MainScene.h"
-#include "Scenes/LoginScene.h"
+#include "Scenes/MenuScene.h"
+#include "Data/SaveSystem.h"
+#include "GameObjects/Buildings/Building.h"
 #include "Managers/SoundManager.h"
 
 #include "ui/CocosGUI.h"
@@ -8,12 +10,112 @@
 #ifdef _WIN32
 #include <windows.h>
 #endif
+#include <algorithm>
 
 USING_NS_CC;
 
 Scene* BattleScene::createScene()
 {
     return BattleScene::create();
+}
+
+void BattleScene::setBuildingVisualParams()
+{
+    _buildingScale = 0.33f;
+    _buildingScaleById.assign(10, 1.0f);
+    _buildingOffsetById.assign(10, Vec2::ZERO);
+    _buildingScaleById[1] = 0.4f;
+    _buildingOffsetById[1] = Vec2(0, 20 / 3);
+    _buildingOffsetById[2] = Vec2(-2 / 3, 14 / 3);
+    _buildingOffsetById[3] = Vec2(-10 / 3, 14 / 3);
+    _buildingOffsetById[4] = Vec2(4 / 3, 4 / 3);
+    _buildingScaleById[7] = 0.7f;
+    _buildingOffsetById[7] = Vec2(-4 / 3, 0);
+    _buildingScaleById[8] = 1.3f;
+    _buildingOffsetById[8] = Vec2(4 / 3, 10 / 3);
+    _buildingScaleById[9] = 0.8f;
+    _buildingOffsetById[9] = Vec2(4 / 3, 10 / 3);
+}
+
+Vec2 BattleScene::gridToWorld(int r, int c) const
+{
+    float x = _anchor.x + (c - r) * (_tileW * 0.5f);
+    float y = _anchor.y - (c + r) * (_tileH * 0.5f);
+    return Vec2(x, y);
+}
+
+void BattleScene::renderTargetVillage()
+{
+    if (!_world) return;
+
+    auto children = _world->getChildren();
+    for (auto child : children)
+    {
+        if (child != _background) child->removeFromParent();
+    }
+
+    int targetSlot = SaveSystem::getBattleTargetSlot();
+    if (targetSlot < 0 || !SaveSystem::exists(targetSlot))
+    {
+        auto msg = Label::createWithSystemFont("No target selected", "Arial", 30);
+        msg->setPosition(Director::getInstance()->getVisibleOrigin() + Director::getInstance()->getVisibleSize() / 2);
+        this->addChild(msg, 5);
+        return;
+    }
+
+    SaveData data;
+    if (!SaveSystem::load(targetSlot, data))
+    {
+        auto msg = Label::createWithSystemFont("Failed to load target", "Arial", 30);
+        msg->setPosition(Director::getInstance()->getVisibleOrigin() + Director::getInstance()->getVisibleSize() / 2);
+        this->addChild(msg, 5);
+        return;
+    }
+
+    auto imageUvToWorld = [this](const Vec2& uv) {
+        if (!_background) return Vec2::ZERO;
+        Size s = _background->getContentSize();
+        float sx = _background->getScaleX();
+        float sy = _background->getScaleY();
+        Vec2 local((uv.x - 0.5f) * s.width, (uv.y - 0.5f) * s.height);
+        Vec2 parentSpace = _background->getPosition() + Vec2(local.x * sx, local.y * sy);
+        return _background->getParent()->convertToWorldSpace(parentSpace);
+        };
+    Vec2 uvTop(0.51f, 0.20f);
+    Vec2 uvRight(0.83f, 0.49f);
+    Vec2 uvBottom(0.51f, 0.92f);
+    Vec2 uvLeft(0.17f, 0.49f);
+    Vec2 top = _world->convertToNodeSpace(imageUvToWorld(uvTop));
+    Vec2 right = _world->convertToNodeSpace(imageUvToWorld(uvRight));
+    Vec2 bottom = _world->convertToNodeSpace(imageUvToWorld(uvBottom));
+    Vec2 left = _world->convertToNodeSpace(imageUvToWorld(uvLeft));
+    float Lr = right.x - left.x;
+    float Lt = top.y - bottom.y;
+    _tileW = (2.0f * Lr) / (_cols + _rows);
+    _tileH = (2.0f * Lt) / (_cols + _rows);
+    _anchor = top;
+
+    std::sort(data.buildings.begin(), data.buildings.end(), [](const SaveBuilding& a, const SaveBuilding& b) {
+        int sa = a.r + a.c;
+        int sb = b.r + b.c;
+        if (sa == sb) return a.r < b.r;
+        return sa < sb;
+        });
+
+    for (const auto& bInfo : data.buildings)
+    {
+        auto b = BuildingFactory::create(bInfo.id, std::max(1, bInfo.level));
+        if (!b) continue;
+        if (bInfo.hp > 0) b->hp = std::min(bInfo.hp, b->hpMax);
+        b->stored = bInfo.stored;
+        auto sprite = b->createSprite();
+        Vec2 pos = gridToWorld(bInfo.r, bInfo.c);
+        int idx = std::max(1, std::min(9, bInfo.id));
+        Vec2 off = _buildingOffsetById[idx];
+        sprite->setPosition(pos + off);
+        sprite->setScale(_buildingScale * _buildingScaleById[idx]);
+        _world->addChild(sprite, 3 + bInfo.r + bInfo.c);
+    }
 }
 
 bool BattleScene::init()
@@ -23,17 +125,26 @@ bool BattleScene::init()
     auto visibleSize = Director::getInstance()->getVisibleSize();
     Vec2 origin = Director::getInstance()->getVisibleOrigin();
 
-    // Background color (gray for battle)
-    auto layer = LayerColor::create(Color4B(50, 50, 50, 255));
-    this->addChild(layer);
+    _world = Node::create();
+    this->addChild(_world, 0);
 
-    auto label = Label::createWithTTF("Battle Scene", "fonts/Marker Felt.ttf", 24);
-    if (!label) {
-        label = Label::createWithSystemFont("Battle Scene", "Arial", 24);
+    _background = Sprite::create("backgrounds/village_map.jpg");
+    if (_background)
+    {
+        Size bg = _background->getContentSize();
+        float scale = std::max(visibleSize.width / bg.width, visibleSize.height / bg.height);
+        _background->setScale(scale);
+        _background->setPosition(Vec2(origin.x + visibleSize.width * 0.5f, origin.y + visibleSize.height * 0.5f));
+        _world->addChild(_background, 0);
     }
-    label->setPosition(Vec2(origin.x + visibleSize.width / 2,
-        origin.y + visibleSize.height / 2));
-    this->addChild(label, 1);
+    else
+    {
+        auto fallback = LayerColor::create(Color4B(50, 50, 50, 255));
+        this->addChild(fallback, -1);
+    }
+
+    setBuildingVisualParams();
+    renderTargetVillage();
 
     // Back button
     auto backLabel = Label::createWithSystemFont("Back to Village", "Arial", 20);
@@ -107,7 +218,7 @@ void BattleScene::openEscMenu()
     auto backItem = MenuItemLabel::create(backLabel, [this](Ref*) {
         closeEscMenu();
         Director::getInstance()->replaceScene(
-            TransitionFade::create(0.35f, LoginScene::createScene())
+            TransitionFade::create(0.35f, MenuScene::createScene())
         );
         });
 

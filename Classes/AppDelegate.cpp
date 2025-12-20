@@ -1,6 +1,6 @@
 #include "AppDelegate.h"
-#include "Scenes/MainScene.h"
-#include "Scenes/LoginScene.h"
+// Entry scene
+#include "Scenes/MenuScene.h"
 #include "Managers/SoundManager.h"
 #ifdef _WIN32
 #include <windows.h>
@@ -32,7 +32,8 @@ bool AppDelegate::applicationDidFinishLaunching() {
     }
     director->setAnimationInterval(1.0f / 60);
     glview->setDesignResolutionSize(1136, 640, ResolutionPolicy::NO_BORDER);
-    auto scene = LoginScene::createScene();
+    // Start from the main menu (Create New / Load Existing)
+    auto scene = MenuScene::createScene();
     director->runWithScene(scene);
     return true;
 }

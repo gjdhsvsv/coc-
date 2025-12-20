@@ -3,7 +3,7 @@
 #include <vector>
 #include <memory>
 #include <unordered_map>
-
+struct SaveBuilding;
 class MainScene : public cocos2d::Scene
 {
 public:
@@ -18,7 +18,8 @@ public:
     void setZoom(float z);
     void setupInteraction();
     virtual void update(float dt) override;
-    void setTimeScale(float s) { _timeScale = std::max(0.01f, s); }
+    void setTimeScale(float s);
+    virtual void onExit() override;
 private:
     struct PlacedBuilding { int id; int r; int c; cocos2d::Sprite* sprite; std::shared_ptr<class Building> data; };
     std::vector<PlacedBuilding> _buildings;
@@ -83,5 +84,16 @@ private:
 
     cocos2d::LayerColor* _escMask = nullptr;
     cocos2d::LayerColor* _settingsMask = nullptr;
+    // Save/load helpers
+    void loadFromCurrentSaveOrCreate();
+    void saveToCurrentSlot(bool force);
+    void placeBuildingLoaded(int r, int c, const SaveBuilding& info);
 
+    bool _saveDirty = false;
+    float _autosaveTimer = 0.0f;
+
+    // Attack picker
+    void openAttackTargetPicker();
+    void closeAttackTargetPicker();
+    cocos2d::LayerColor* _attackMask = nullptr;
 };
