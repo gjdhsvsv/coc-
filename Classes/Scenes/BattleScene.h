@@ -1,5 +1,4 @@
-﻿#pragma once
-#include "cocos2d.h"
+﻿#include "cocos2d.h"
 #include <vector>
 #include <unordered_map>
 

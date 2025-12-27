@@ -1,4 +1,4 @@
-#include "Scenes/BattleScene.h"
+ï»¿#include "Scenes/BattleScene.h"
 #include "Scenes/MainScene.h"
 #include "Scenes/LoginScene.h"
 #include "Data/SaveSystem.h"
@@ -30,8 +30,10 @@ Scene* BattleScene::createScene()
 void BattleScene::setBuildingVisualParams()
 {
     _buildingScale = 0.33f;
-    _buildingScaleById.assign(11, 1.0f);
-    _buildingOffsetById.assign(11, Vec2::ZERO);
+    // Keep the same visual parameter mapping as MainScene.
+    // NOTE: MainScene clamps all ids >= 9 to index 9 when applying scale/offset (including wall id=10).
+    _buildingScaleById.assign(10, 1.0f);
+    _buildingOffsetById.assign(10, Vec2::ZERO);
 
     _buildingScaleById[1] = 0.4f;
     _buildingOffsetById[1] = Vec2(0, 20 / 3);
@@ -48,9 +50,6 @@ void BattleScene::setBuildingVisualParams()
 
     _buildingScaleById[9] = 0.8f;
     _buildingOffsetById[9] = Vec2(4 / 3, 10 / 3);
-
-    _buildingScaleById[10] = 0.6f;
-    _buildingOffsetById[10] = Vec2(0, 0);
 }
 
 Vec2 BattleScene::gridToWorld(int r, int c) const
@@ -90,7 +89,8 @@ bool BattleScene::getCellFromClick(const cocos2d::Vec2& clickLocalPos, int& outR
     int c = (int)std::round(rc.y);
 
     if (r < 0 || r >= _rows || c < 0 || c >= _cols) return false;
-    if (!isPointInCellDiamondLocal(clickLocalPos, r, c)) return false;
+    // Keep behavior consistent with MainScene: it simply rounds to the nearest grid cell
+    // and relies on boundary / occupancy rules, without doing an additional diamond hit-test.
 
     outR = r;
     outC = c;
@@ -111,12 +111,12 @@ void BattleScene::buildEnemyForbiddenGrid(bool outForbid[30][30]) const
     for (const auto& b : _enemyBuildings)
     {
         if (!b.building) continue;
-        if (b.building->hp <= 0) continue; // ±»´Ý»ÙÔò½â³ý½û·Å£¨Èç¹ûÄã²»Ïë½â³ý£¬É¾µô´ËÐÐ£©
+        if (b.building->hp <= 0) continue; // Â±Â»Â´ÃÂ»Ã™Ã”Ã²Â½Ã¢Â³Ã½Â½Ã»Â·Ã…Â£Â¨ÃˆÃ§Â¹Ã»Ã„Ã£Â²Â»ÃÃ«Â½Ã¢Â³Ã½Â£Â¬Ã‰Â¾ÂµÃ´Â´Ã‹ÃÃÂ£Â©
 
         int br = b.r;
         int bc = b.c;
 
-        // footprint£ºÇ½ 1x1£¬ÆäËü°´ 3x3
+        // footprintÂ£ÂºÃ‡Â½ 1x1Â£Â¬Ã†Ã¤Ã‹Ã¼Â°Â´ 3x3
         int r0 = (b.id == 10 ? 0 : -1);
         int r1 = (b.id == 10 ? 0 : 1);
         int c0 = (b.id == 10 ? 0 : -1);
@@ -129,7 +129,7 @@ void BattleScene::buildEnemyForbiddenGrid(bool outForbid[30][30]) const
                 int cc = bc + dc;
                 if (rr < 0 || rr >= 30 || cc < 0 || cc >= 30) continue;
 
-                // »º³å 1 ¸ñ£¨º¬¶Ô½Ç£©
+                // Â»ÂºÂ³Ã¥ 1 Â¸Ã±Â£Â¨ÂºÂ¬Â¶Ã”Â½Ã‡Â£Â©
                 for (int er = -1; er <= 1; ++er)
                     for (int ec = -1; ec <= 1; ++ec)
                         markForbid(rr + er, cc + ec);
@@ -195,6 +195,8 @@ void BattleScene::renderTargetVillage()
 
     _cellSizePx = std::max(8.0f, (_tileW + _tileH) * 0.25f);
     _ai.setCellSizePx(_cellSizePx);
+    // Make AI grid conversion consistent with MainScene's iso grid.
+    _ai.setIsoGrid(_rows, _cols, _tileW, _tileH, _anchor);
 
     std::sort(data.buildings.begin(), data.buildings.end(),
         [](const SaveBuilding& a, const SaveBuilding& b) {
@@ -215,7 +217,8 @@ void BattleScene::renderTargetVillage()
         auto sprite = b->createSprite();
         Vec2 pos = gridToWorld(bInfo.r, bInfo.c);
 
-        int idx = std::max(1, std::min(10, bInfo.id));
+        // Match MainScene's visual param indexing (ids >= 9 map to 9, including wall id=10).
+        int idx = std::max(1, std::min(9, bInfo.id));
         Vec2 off = _buildingOffsetById[idx];
 
         sprite->setPosition(pos + off);
@@ -464,7 +467,7 @@ bool BattleScene::handleTroopBarClick(const cocos2d::Vec2& glPos)
         }
     }
 
-    // µã»÷µ½±øÖÖÀ¸±³¾°£¬Ò²ÍÌµô£¬±ÜÃâÎó·Å
+    // ÂµÃ£Â»Ã·ÂµÂ½Â±Ã¸Ã–Ã–Ã€Â¸Â±Â³Â¾Â°Â£Â¬Ã’Â²ÃÃŒÂµÃ´Â£Â¬Â±ÃœÃƒÃ¢ÃŽÃ³Â·Ã…
     Size s = _troopBar->getContentSize();
     Rect bg(0, 0, s.width, s.height);
     if (bg.containsPoint(local)) return true;
@@ -578,7 +581,7 @@ bool BattleScene::spawnUnit(int unitId, const cocos2d::Vec2& clickLocalPos)
     auto it = _troopCounts.find(unitId);
     if (it == _troopCounts.end() || it->second <= 0) return false;
 
-    // 1) ÅÐ¶¨µã»÷ÊÇ·ñÔÚµØÍ¼ÓÐÐ§¸ñÄÚ
+    // 1) Ã…ÃÂ¶Â¨ÂµÃ£Â»Ã·ÃŠÃ‡Â·Ã±Ã”ÃšÂµÃ˜ÃÂ¼Ã“ÃÃÂ§Â¸Ã±Ã„Ãš
     int r = -1, c = -1;
     if (!getCellFromClick(clickLocalPos, r, c))
     {
@@ -586,7 +589,7 @@ bool BattleScene::spawnUnit(int unitId, const cocos2d::Vec2& clickLocalPos)
         return false;
     }
 
-    // 2) ½û·ÅÇø£º½¨Öþ + ÖÜÎ§Ò»È¦
+    // 2) Â½Ã»Â·Ã…Ã‡Ã¸Â£ÂºÂ½Â¨Ã–Ã¾ + Ã–ÃœÃŽÂ§Ã’Â»ÃˆÂ¦
     bool forbid[30][30];
     buildEnemyForbiddenGrid(forbid);
 
@@ -596,8 +599,8 @@ bool BattleScene::spawnUnit(int unitId, const cocos2d::Vec2& clickLocalPos)
         return false;
     }
 
-    // 3) ´´½¨µ¥Î»
-    int level = 1; // TODO: ÄãºóÐøÈç¹ûÒª¶ÁÈ¡ÑµÁ·µÈ¼¶£¬ÔÚÕâÀï»»³É´æµµµÈ¼¶
+    // 3) Â´Â´Â½Â¨ÂµÂ¥ÃŽÂ»
+    int level = 1; // TODO: Ã„Ã£ÂºÃ³ÃÃ¸ÃˆÃ§Â¹Ã»Ã’ÂªÂ¶ÃÃˆÂ¡Ã‘ÂµÃÂ·ÂµÃˆÂ¼Â¶Â£Â¬Ã”ÃšÃ•Ã¢Ã€Ã¯Â»Â»Â³Ã‰Â´Ã¦ÂµÂµÂµÃˆÂ¼Â¶
     std::unique_ptr<UnitBase> u = UnitFactory::create(unitId, level);
     if (!u)
     {
@@ -608,17 +611,17 @@ bool BattleScene::spawnUnit(int unitId, const cocos2d::Vec2& clickLocalPos)
     auto spr = u->createSprite();
     if (!spr) spr = Sprite::create();
 
-    // 4) ¹Ø¼ü£º¾«È·Âäµã = Êó±êµã»÷Î»ÖÃ£¨½Åµ×¶ÔÆë£©
+    // 4) Â¹Ã˜Â¼Ã¼Â£ÂºÂ¾Â«ÃˆÂ·Ã‚Ã¤ÂµÃ£ = ÃŠÃ³Â±ÃªÂµÃ£Â»Ã·ÃŽÂ»Ã–ÃƒÂ£Â¨Â½Ã…ÂµÃ—Â¶Ã”Ã†Ã«Â£Â©
     spr->setAnchorPoint(Vec2(0.5f, 0.0f));
 
-    // ´óÐ¡ÈÔ±£³ÖÑµÁ·ºóÄÇÌ×±ÈÀý
+    // Â´Ã³ÃÂ¡ÃˆÃ”Â±Â£Â³Ã–Ã‘ÂµÃÂ·ÂºÃ³Ã„Ã‡ÃŒÃ—Â±ÃˆÃ€Ã½
     float desiredW = _tileW * 0.60f;
     float s = desiredW / std::max(1.0f, spr->getContentSize().width);
     spr->setScale(s);
 
     spr->setPosition(clickLocalPos);
 
-    // z ÐòÓÃ r+c
+    // z ÃÃ²Ã“Ãƒ r+c
     int z = 5 + r + c;
     _world->addChild(spr, z);
 
