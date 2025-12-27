@@ -209,7 +209,7 @@ void BattleScene::renderTargetVillage()
         auto b = BuildingFactory::create(bInfo.id, std::max(1, bInfo.level));
         if (!b) continue;
 
-        if (bInfo.hp > 0) b->hp = std::min(bInfo.hp, b->hpMax);
+        b->hp = b->hpMax;
         b->stored = bInfo.stored;
 
         auto sprite = b->createSprite();

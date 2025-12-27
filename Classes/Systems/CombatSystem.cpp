@@ -88,23 +88,30 @@ void CombatSystem::ensureHpBar(Sprite* sprite, int hp, int hpMax, bool isUnit)
     LayerColor* bg = nullptr;
     LayerColor* fill = nullptr;
 
-    const float w = isUnit ? 46.0f : 56.0f;
-    const float h = 6.0f;
+    // 更小一点
+    const float w = isUnit ? 40.0f : 48.0f;
+    const float h = 5.0f;
+    const float pad = 1.0f;
+
+    // ★关键：用锚点作为基准，保证“精准在单位脚下”
+    Vec2 ap = sprite->getAnchorPointInPoints();          // 锚点在 sprite 本地坐标中的位置
+    float gapUnder = 7.0f;                               // 你可以微调：6~12 都行
+    float yUnit = ap.y - (h * 0.5f + gapUnder);          // 单位血条：锚点正下方
+    float yBuilding = sprite->getContentSize().height + 12.0f; // 建筑：仍在上方
 
     if (!bar)
     {
         bar = Node::create();
         bar->setName(HPBAR_NAME);
 
-        // Keep bar size stable regardless of sprite scale
+        // 血条大小不随 sprite 缩放变化
         float sx = std::max(0.001f, sprite->getScaleX());
         float sy = std::max(0.001f, sprite->getScaleY());
         bar->setScaleX(1.0f / sx);
         bar->setScaleY(1.0f / sy);
 
-        // position above sprite
-        float yOff = sprite->getContentSize().height * 0.5f + (isUnit ? 28.0f : 34.0f);
-        bar->setPosition(Vec2(0, yOff));
+        // ★定位：单位脚下 / 建筑上方
+        bar->setPosition(Vec2(std::round(ap.x), std::round(isUnit ? yUnit : yBuilding)));
         sprite->addChild(bar, 999);
 
         bg = LayerColor::create(Color4B(0, 0, 0, 160), w, h);
@@ -114,15 +121,20 @@ void CombatSystem::ensureHpBar(Sprite* sprite, int hp, int hpMax, bool isUnit)
         bg->setPosition(Vec2(0, 0));
         bar->addChild(bg);
 
-        fill = LayerColor::create(Color4B(60, 220, 90, 220), w, h);
+        float fw = std::max(1.0f, w - pad * 2.0f);
+        float fh = std::max(1.0f, h - pad * 2.0f);
+        fill = LayerColor::create(Color4B(60, 220, 90, 220), fw, fh);
         fill->setName(HPFILL_NAME);
         fill->setIgnoreAnchorPointForPosition(false);
         fill->setAnchorPoint(Vec2(0.0f, 0.5f));
-        fill->setPosition(Vec2(-w * 0.5f, 0));
+        fill->setPosition(Vec2(-w * 0.5f + pad, 0));
         bar->addChild(fill);
     }
     else
     {
+        // ★如果 sprite 锚点/尺寸不同，运行时也跟着重新定位一次（保持精准）
+        bar->setPosition(Vec2(std::round(ap.x), std::round(isUnit ? yUnit : yBuilding)));
+
         bg = dynamic_cast<LayerColor*>(bar->getChildByName(HPBG_NAME));
         fill = dynamic_cast<LayerColor*>(bar->getChildByName(HPFILL_NAME));
     }
@@ -133,10 +145,11 @@ void CombatSystem::ensureHpBar(Sprite* sprite, int hp, int hpMax, bool isUnit)
     pct = std::max(0.0f, std::min(1.0f, pct));
     fill->setScaleX(pct);
 
-    // Hide bar when full for buildings (optional). Keep units always visible.
-    if (!isUnit)
-        bar->setVisible(pct < 0.999f);
+    // 仍保留：建筑满血隐藏（你也可以改成一直显示）
+    if (!isUnit) bar->setVisible(pct < 0.999f);
+    else bar->setVisible(true);
 }
+
 
 bool CombatSystem::tryUnitAttackBuilding(UnitBase& attacker,
     Sprite* attackerSprite,
