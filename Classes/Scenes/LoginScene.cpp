@@ -1,3 +1,5 @@
+// File: LoginScene.cpp
+// Brief: Implements the LoginScene component.
 #include "Scenes/LoginScene.h"
 
 #include "Data/SaveSystem.h"
@@ -22,7 +24,7 @@ bool LoginScene::init()
     auto visibleSize = Director::getInstance()->getVisibleSize();
     auto origin = Director::getInstance()->getVisibleOrigin();
 
-    // Background
+    
     auto bg = Sprite::create("background.jpg");
     if (!bg) bg = Sprite::create("backgrounds/village_map.jpg");
     if (bg)
@@ -39,14 +41,14 @@ bool LoginScene::init()
         this->addChild(LayerColor::create(Color4B(60, 80, 120, 255)), -1);
     }
 
-    // Clear battle target when entering selector
+    
     SaveSystem::setBattleTargetSlot(-1);
 
-    // Build and show selector
+    
     buildSaveUI();
     openSaveSelector();
 
-    // UI jingle on entering save selector.
+    
     SoundManager::playSfx("music/loading_screen_jingle.ogg", 1.0f);
 
     return true;
@@ -79,7 +81,7 @@ void LoginScene::buildSaveUI()
     auto visibleSize = Director::getInstance()->getVisibleSize();
     auto origin = Director::getInstance()->getVisibleOrigin();
 
-    // mask
+    
     _saveMask = LayerColor::create(Color4B(0, 0, 0, 120));
     this->addChild(_saveMask, 10);
 
@@ -101,13 +103,13 @@ void LoginScene::buildSaveUI()
     panelListener->onTouchBegan = [](Touch*, Event*) { return true; };
     _eventDispatcher->addEventListenerWithSceneGraphPriority(panelListener, panel);
 
-    // Title
+    
     auto header = Label::createWithSystemFont("Select Save", "Arial", 56);
     header->setColor(Color3B::BLACK);
     header->setPosition(Vec2(panelW / 2, panelH - 50));
     panel->addChild(header);
 
-    // Top-right back button to MenuScene
+    
     auto backLabel = Label::createWithSystemFont("Back", "Arial", 36);
     backLabel->setColor(Color3B::BLACK);
     auto backItem = MenuItemLabel::create(backLabel, [this](Ref*) {
@@ -118,7 +120,7 @@ void LoginScene::buildSaveUI()
     backMenu->setPosition(Vec2::ZERO);
     panel->addChild(backMenu, 2);
 
-    // Scroll view
+    
     _saveScroll = ui::ScrollView::create();
     _saveScroll->setDirection(ui::ScrollView::Direction::VERTICAL);
     _saveScroll->setBounceEnabled(true);
@@ -184,7 +186,7 @@ void LoginScene::refreshSaveList()
         label->setColor(Color3B::BLACK);
         rowBg->addChild(label);
 
-        // Enter
+        
         auto enterLabel = Label::createWithSystemFont("Enter", "Arial", 28);
         enterLabel->setColor(Color3B::BLACK);
         auto enterItem = MenuItemLabel::create(enterLabel, [meta](Ref*) {
@@ -195,7 +197,7 @@ void LoginScene::refreshSaveList()
             );
         });
 
-        // Delete
+        
         auto delLabel = Label::createWithSystemFont("Delete", "Arial", 28);
         delLabel->setColor(Color3B::BLACK);
         auto delItem = MenuItemLabel::create(delLabel, [this, meta](Ref*) {

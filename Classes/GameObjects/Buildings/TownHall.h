@@ -1,7 +1,10 @@
+// File: TownHall.h
+// Brief: Declares the TownHall component.
 #pragma once
 #include "GameObjects/Buildings/Building.h"
 #include "Managers/ConfigManager.h"
 #include "Managers/ResourceManager.h"
+// TownHall encapsulates related behavior and state.
 class TownHall : public Building {
 public:
     TownHall() { image = "buildings/buildings0.png"; }

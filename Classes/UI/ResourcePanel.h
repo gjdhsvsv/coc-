@@ -1,16 +1,24 @@
+// File: ResourcePanel.h
+// Brief: Declares the ResourcePanel component.
 #pragma once
 #include "cocos2d.h"
 #include "Managers/ResourceManager.h"
 #include <functional>
+// ResourcePanel encapsulates related behavior and state.
 class ResourcePanel : public cocos2d::Node {
 public:
     CREATE_FUNC(ResourcePanel);
+    // Initializes the object.
     virtual bool init() override;
+    // Handles an event callback.
     virtual void onExit() override;
+    // Sets the PanelScale.
     void setPanelScale(float s);
     std::function<void(float)> onSetTimeScale;
 private:
+    // TODO: Add a brief description.
     void layout();
+    // Updates the object state.
     void updateTexts(const Resources& r);
     cocos2d::Label* _goldLabel = nullptr;
     cocos2d::Label* _elixirLabel = nullptr;
@@ -28,7 +36,7 @@ private:
     bool _timeActive = false;
         long long _lastCheatMs = 0;
 float _scale = 1.0f;
-    // Cached ratios for progress bars (0..1).
+    
     float _goldRatio = 0.0f;
     float _elixirRatio = 0.0f;
 

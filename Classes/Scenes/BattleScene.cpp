@@ -1,3 +1,5 @@
+// File: BattleScene.cpp
+// Brief: Implements the BattleScene component.
 #include "Scenes/BattleScene.h"
 #include "Scenes/MainScene.h"
 #include "Scenes/LoginScene.h"
@@ -27,7 +29,7 @@ Scene* BattleScene::createScene()
 void BattleScene::setBuildingVisualParams()
 {
     _buildingScale = 0.33f;
-    // Indexed by building id. Reserve a bit more space for new building types.
+    
     _buildingScaleById.assign(12, 1.0f);
     _buildingOffsetById.assign(12, Vec2::ZERO);
     _buildingScaleById[1] = 0.4f;
@@ -42,12 +44,40 @@ void BattleScene::setBuildingVisualParams()
     _buildingScaleById[9] = 0.8f;
     _buildingOffsetById[9] = Vec2(4 / 3, 10 / 3);
 
-    // Wall (id=10) visuals
+    
     if ((int)_buildingScaleById.size() > 10) {
         _buildingScaleById[10] = 0.8f;
         _buildingOffsetById[10] = Vec2(0, 4 / 3);
     }
 }
+
+namespace {
+// Scales a sprite so it fits inside a fixed tile footprint on the isometric grid.
+// This is used to keep certain buildings (e.g. cannon) visually constrained to
+// a consistent grid size regardless of the underlying texture dimensions.
+static void FitSpriteToTileFootprint(cocos2d::Sprite* sprite,
+    float tileW,
+    float tileH,
+    int footprintTilesW,
+    int footprintTilesH)
+{
+    if (!sprite) return;
+
+    const cocos2d::Size content = sprite->getContentSize();
+    if (content.width <= 0.0f || content.height <= 0.0f) return;
+
+    // In this project, one isometric grid cell roughly maps to (tileW x tileH).
+    // A NxN footprint should never exceed (N * tileW, N * tileH) on screen.
+    const float targetW = std::max(1.0f, tileW * std::max(1, footprintTilesW));
+    const float targetH = std::max(1.0f, tileH * std::max(1, footprintTilesH));
+
+    // Keep aspect ratio to avoid stretching the art.
+    const float sx = targetW / content.width;
+    const float sy = targetH / content.height;
+    const float s = std::min(sx, sy);
+    sprite->setScale(std::max(0.0001f, s));
+}
+} 
 
 Vec2 BattleScene::gridToWorld(int r, int c) const
 {
@@ -60,7 +90,7 @@ void BattleScene::renderTargetVillage()
 {
     if (!_world) return;
 
-    // Load both attacker/defender save data once.
+    
     if (!_savesLoaded) {
         loadBattleSaves();
     }
@@ -80,10 +110,10 @@ void BattleScene::renderTargetVillage()
         return;
     }
 
-    // _defenderData was already loaded by loadBattleSaves().
+    
     SaveData& data = _defenderData;
 
-// Loot model is initialized after enemy buildings are spawned (needs storage caps).
+
 _lootGoldTotal = 0;
 _lootElixirTotal = 0;
 _lootedGold = 0;
@@ -100,10 +130,10 @@ if (_lootHud) updateLootHUD();
         return _background->getParent()->convertToWorldSpace(parentSpace);
     };
 
-    // Sample 4 points from the map image to estimate the isometric diamond.
-// NOTE: The UV values are approximate. We re-order the resulting points by
-// their extremums (top/bottom/left/right) so the math is robust even if the
-// texture or coordinate system is vertically flipped.
+    
+
+
+
 Vec2 uvA(0.51f, 0.20f);
 Vec2 uvB(0.83f, 0.49f);
 Vec2 uvC(0.51f, 0.92f);
@@ -133,14 +163,14 @@ _tileW = (2.0f * Lr) / (_cols + _rows);
 _tileH = (2.0f * Lt) / (_cols + _rows);
 _anchor = top;
 
-// Cache deployable diamond corners (node space of _world).
+
 _deployTop = top;
 _deployRight = right;
 _deployBottom = bottom;
 _deployLeft = left;
 _deployAreaReady = true;
 
-    // Initialize battle AI grid conversion.
+    
     _cellSizePx = std::max(8.0f, (_tileW + _tileH) * 0.25f);
     _ai.setCellSizePx(_cellSizePx);
     _ai.setIsoGrid(_rows, _cols, _tileW, _tileH, _anchor);
@@ -152,7 +182,7 @@ _deployAreaReady = true;
         return sa < sb;
     });
 
-    // Cache enemy building cells for deployment blocking.
+    
     _enemyBuildings.clear();
     _enemyBuildings.reserve(data.buildings.size());
 
@@ -162,8 +192,8 @@ _deployAreaReady = true;
         auto b = BuildingFactory::create(bInfo.id, std::max(1, bInfo.level), true, false);
         if (!b) continue;
 
-        // Battle starts with a fresh enemy village: all buildings are full HP.
-        // (HP bars are shown only after taking damage.)
+        
+        
         b->hp = b->hpMax;
 
         b->stored = bInfo.stored;
@@ -174,7 +204,18 @@ _deployAreaReady = true;
         Vec2 off = _buildingOffsetById[idx];
 
         sprite->setPosition(pos + off);
-        sprite->setScale(_buildingScale * _buildingScaleById[idx]);
+
+        // Cannons should always render as a 3x3 footprint in the battle scene.
+        // Their barrel direction sprites have different source sizes, so we
+        // constrain the on-screen size to avoid oversized cannons.
+        if (bInfo.id == 2)
+        {
+            FitSpriteToTileFootprint(sprite, _tileW, _tileH, 3, 3);
+        }
+        else
+        {
+            sprite->setScale(_buildingScale * _buildingScaleById[idx]);
+        }
 
         EnemyBuildingRuntime rt;
         rt.id = bInfo.id;
@@ -191,9 +232,9 @@ _deployAreaReady = true;
     }
 
 
-// Lootable resources: 50% of the enemy village's current resources.
-// - Gold/Elixir storages: loot is proportional to HP lost (up to 50% from that storage).
-// - TownHall: loot can only be obtained when the TownHall is completely destroyed.
+
+
+
 {
     int goldBase = std::max(0, data.gold);
     int elixirBase = std::max(0, data.elixir);
@@ -205,7 +246,7 @@ _deployAreaReady = true;
     _lootedGold = 0;
     _lootedElixir = 0;
 
-    // Reset per-building loot state.
+    
     for (auto& eb : _enemyBuildings)
     {
         eb.lootGoldMax = 0;
@@ -216,7 +257,7 @@ _deployAreaReady = true;
         eb.lastHp = eb.building ? eb.building->hp : 0;
     }
 
-    // Collect storages and TownHall indices.
+    
     std::vector<int> goldStorIdx;
     std::vector<int> goldStorMaxLoot;
     std::vector<int> elixirStorIdx;
@@ -230,7 +271,7 @@ _deployAreaReady = true;
     for (int i = 0; i < (int)_enemyBuildings.size(); ++i)
     {
         auto& eb = _enemyBuildings[i];
-        if (eb.id == 6) // Gold Storage
+        if (eb.id == 6) 
         {
             int lv = eb.building ? eb.building->level : 1;
             auto st = ConfigManager::getGoldStorageStats(lv);
@@ -238,7 +279,7 @@ _deployAreaReady = true;
             goldStorIdx.push_back(i);
             goldStorMaxLoot.push_back(cap / 2);
         }
-        else if (eb.id == 4) // Elixir Storage
+        else if (eb.id == 4) 
         {
             int lv = eb.building ? eb.building->level : 1;
             auto st = ConfigManager::getElixirStorageStats(lv);
@@ -246,29 +287,29 @@ _deployAreaReady = true;
             elixirStorIdx.push_back(i);
             elixirStorMaxLoot.push_back(cap / 2);
         }
-        else if (eb.id == 5) // Gold Mine
+        else if (eb.id == 5) 
         {
             int stored = (int)std::floor(std::max(0.0f, eb.building ? eb.building->stored : 0.0f) + 1e-6f);
             extraGoldFromMines += stored;
             goldMineIdx.push_back(i);
             goldMineMaxLoot.push_back(stored / 2);
         }
-        else if (eb.id == 3) // Elixir Collector
+        else if (eb.id == 3) 
         {
             int stored = (int)std::floor(std::max(0.0f, eb.building ? eb.building->stored : 0.0f) + 1e-6f);
             extraElixirFromCollectors += stored;
             elixirCollectorIdx.push_back(i);
             elixirCollectorMaxLoot.push_back(stored / 2);
         }
-        else if (eb.id == 9) // TownHall
+        else if (eb.id == 9) 
         {
             townHallIdx = i;
         }
     }
 
 
-    // Total loot is 50% of the enemy's currently available resources.
-    // This includes uncollected resources stored inside mines/collectors.
+    
+    
     targetGold = std::max(0, (goldBase + extraGoldFromMines) / 2);
     targetElixir = std::max(0, (elixirBase + extraElixirFromCollectors) / 2);
 
@@ -299,7 +340,7 @@ _deployAreaReady = true;
         }
 
         int remain = totalForStor - used;
-        // Distribute the small remainder based on fractional parts.
+        
         while (remain > 0)
         {
             int best = -1;
@@ -320,9 +361,9 @@ _deployAreaReady = true;
         }
     };
 
-    // Assign loot to Gold Storages, remainder goes to TownHall.
-    // Assign loot to Gold Mines first (proportional to their stored resources),
-    // then Gold Storages. Any remainder goes to the TownHall.
+    
+    
+    
     int remainGold = targetGold;
     {
         std::vector<int> alloc;
@@ -348,8 +389,8 @@ _deployAreaReady = true;
     }
     if (townHallIdx >= 0) _enemyBuildings[townHallIdx].lootGoldMax += remainGold;
 
-    // Assign loot to Elixir Collectors first (proportional to their stored resources),
-    // then Elixir Storages. Any remainder goes to the TownHall.
+    
+    
     int remainElixir = targetElixir;
     {
         std::vector<int> alloc;
@@ -376,7 +417,7 @@ _deployAreaReady = true;
     if (townHallIdx >= 0) _enemyBuildings[townHallIdx].lootElixirMax += remainElixir;
 
     if (_lootHud) updateLootHUD();
-    // Build blocked map and overlay after we have _tileW/_tileH/_anchor.
+    
     rebuildDeployBlockedMap();
     rebuildDeployOverlay();
     updateDeployOverlayVisibility();
@@ -404,7 +445,7 @@ void BattleScene::persistBattleSaves()
 {
     if (!_savesLoaded || !_savesDirty) return;
 
-    // Persist resource changes to both villages.
+    
     SaveSystem::save(_attackerData);
     SaveSystem::save(_defenderData);
     _savesDirty = false;
@@ -412,12 +453,12 @@ void BattleScene::persistBattleSaves()
 
 int BattleScene::calcGoldCapFromSave(const SaveData& data) const
 {
-    // NOTE: ResourceManager base cap defaults to 5000 in Resources().
-    // Storages add their capAdd on top of the base.
+    
+    
     int cap = 5000;
     for (const auto& b : data.buildings)
     {
-        if (b.id != 6) continue; // Gold Storage
+        if (b.id != 6) continue; 
         int lv = std::max(1, std::min(5, b.level));
         cap += std::max(0, ConfigManager::getGoldStorageStats(lv).capAdd);
     }
@@ -429,7 +470,7 @@ int BattleScene::calcElixirCapFromSave(const SaveData& data) const
     int cap = 5000;
     for (const auto& b : data.buildings)
     {
-        if (b.id != 4) continue; // Elixir Storage
+        if (b.id != 4) continue; 
         int lv = std::max(1, std::min(5, b.level));
         cap += std::max(0, ConfigManager::getElixirStorageStats(lv).capAdd);
     }
@@ -443,7 +484,7 @@ void BattleScene::settleBattleLoot()
 
     _lootSettled = true;
 
-    // Clamp attacker gain by attacker's storage caps.
+    
     int goldCap = calcGoldCapFromSave(_attackerData);
     int elixirCap = calcElixirCapFromSave(_attackerData);
 
@@ -459,7 +500,7 @@ void BattleScene::settleBattleLoot()
     if (g > 0) _attackerData.gold = std::max(0, _attackerData.gold) + g;
     if (e > 0) _attackerData.elixir = std::max(0, _attackerData.elixir) + e;
 
-    // Defender loses (directly deduct, as requested).
+    
     if (addGold > 0) _defenderData.gold = std::max(0, _defenderData.gold - addGold);
     if (addElixir > 0) _defenderData.elixir = std::max(0, _defenderData.elixir - addElixir);
 
@@ -482,7 +523,7 @@ bool BattleScene::areAllNonWallBuildingsDestroyed() const
     for (const auto& b : _enemyBuildings)
     {
         if (!b.building) continue;
-        if (b.id == 10) continue; // walls ignored
+        if (b.id == 10) continue; 
         if (b.building->hp > 0) return false;
     }
     return true;
@@ -490,13 +531,13 @@ bool BattleScene::areAllNonWallBuildingsDestroyed() const
 
 bool BattleScene::areAllTroopsDeployedAndDead() const
 {
-    // All ready troops deployed?
+    
     for (const auto& kv : _troopCounts)
     {
         if (kv.second > 0) return false;
     }
 
-    // Any alive unit?
+    
     for (const auto& u : _units)
     {
         if (!u.unit) continue;
@@ -531,12 +572,12 @@ bool BattleScene::init()
         this->addChild(fallback, -1);
     }
 
-    // Enable zoom (mouse wheel) and pan (mouse drag) for viewing the enemy village.
+    
     _maxZoom = 2.5f;
     _minZoom = 0.1f;
     if (_background)
     {
-        // Match MainScene logic: prevent zooming out so far that black borders appear.
+        
         Size img = _background->getContentSize();
         float base = _background->getScaleX();
         float minZ = std::max(visibleSize.width / (img.width * base), visibleSize.height / (img.height * base));
@@ -552,10 +593,10 @@ bool BattleScene::init()
         else if (scroll < 0) setZoom(_zoom / 1.10f);
     };
 
-    // Left click:
-    //  - click troop icon in bottom bar -> toggle "selected"
-    //  - click on map (without dragging) -> deploy 1 selected troop
-    //  - drag on map -> pan camera
+    
+    
+    
+    
     mouse->onMouseDown = [this](Event* e) {
         auto m = static_cast<EventMouse*>(e);
         if (m->getMouseButton() != EventMouse::MouseButton::BUTTON_LEFT) return;
@@ -570,7 +611,7 @@ bool BattleScene::init()
         _dragging = false;
         _dragLast = Vec2(m->getCursorX(), m->getCursorY());
 
-        // If user clicked on troop bar, consume the click (no panning / no deployment).
+        
         if (handleTroopBarClick(glPos)) {
             _mouseConsumed = true;
         }
@@ -584,11 +625,11 @@ bool BattleScene::init()
 
         if (!_mouseDown) return;
 
-        // Stop dragging if we were panning.
+        
         if (_dragging) {
             _dragging = false;
         } else {
-            // Treat as a click on the map if it wasn't consumed by UI and wasn't a drag.
+            
             if (!_mouseConsumed && !_mouseMoved) {
                 deploySelectedTroop(glPos);
             }
@@ -607,7 +648,7 @@ bool BattleScene::init()
         Vec2 curScreen(m->getCursorX(), m->getCursorY());
         Vec2 glCur = Director::getInstance()->convertToGL(curScreen);
 
-        // Start dragging only if the mouse moved enough.
+        
         const float kDragThreshold = 6.0f;
         if (!_dragging) {
             if ((glCur - _mouseDownPos).length() < kDragThreshold) return;
@@ -627,10 +668,10 @@ bool BattleScene::init()
 
     _eventDispatcher->addEventListenerWithSceneGraphPriority(mouse, this);
 
-    // Touch support (some devices don't generate mouse events reliably).
+    
     auto touch = EventListenerTouchOneByOne::create();
-    // We handle both UI and map interactions inside this listener. Swallow touches to prevent
-    // accidental propagation that may cause duplicate deployments.
+    
+    
     touch->setSwallowTouches(true);
     touch->onTouchBegan = [this](Touch* t, Event*) {
         Vec2 glPos = t->getLocation();
@@ -638,7 +679,7 @@ bool BattleScene::init()
         _touchConsumed = false;
         _touchMoved = false;
         _touchDownPos = glPos;
-        // First: troop bar selection.
+        
         if (handleTroopBarClick(glPos)) {
             _touchConsumed = true;
             return true;
@@ -652,7 +693,7 @@ bool BattleScene::init()
         if ((glCur - _touchDownPos).length() < kDragThreshold) return;
         _touchMoved = true;
 
-        // Use view/screen coordinates (same space as EventMouse cursorX/Y) for panning.
+        
         Vec2 curScreen = t->getLocationInView();
         if (!_dragging) {
             _dragging = true;
@@ -689,7 +730,7 @@ bool BattleScene::init()
     _battleEnded = false;
     _units.clear();
 
-    // Battle HUD & countdown
+    
     setupBattleHUD();
     setupTroopBar();
         _troopCounts = SaveSystem::getBattleReadyTroops();
@@ -701,19 +742,19 @@ bool BattleScene::init()
     startPhase(Phase::Scout, 45.0f);
     scheduleUpdate();
 
-    // ESC behavior (requested): do NOT open settings.
-    // Only show an "abandon?" confirmation popup and pause the battle timer while it is visible.
+    
+    
     auto listener = EventListenerKeyboard::create();
     listener->onKeyPressed = [this](EventKeyboard::KeyCode code, Event*) {
         if (code != EventKeyboard::KeyCode::KEY_ESCAPE) return;
         if (_battleEnded || _phase == Phase::End) return;
 
-        // If a result popup is showing, ignore ESC.
+        
         if (_resultMask) return;
 
-        // Toggle abandon popup.
+        
         if (_abandonMask) {
-            // Do not resume by ESC; user must pick a button.
+            
             return;
         }
         openAbandonConfirmPopup();
@@ -760,7 +801,7 @@ void BattleScene::setupBattleHUD()
 
     auto returnLabel = Label::createWithSystemFont("Return", "Arial", 44);
     auto returnItem = MenuItemLabel::create(returnLabel, [this](Ref*) {
-        // Return after battle: ensure settlement is applied, then persist.
+        
         settleBattleLoot();
         persistBattleSaves();
         SaveSystem::setBattleTargetSlot(-1);
@@ -777,7 +818,7 @@ void BattleScene::startPhase(Phase p, float durationSec)
 {
     _phase = p;
 
-    // Phase music mapping (Resources/music).
+    
     if (p == Phase::Scout) {
         SoundManager::play("music/capital_pre_battle_music.ogg", true, 0.6f);
     }
@@ -828,16 +869,16 @@ void BattleScene::checkBattleResult(bool timeUp)
 {
     if (_battleEnded) return;
 
-    // End conditions (as required):
-    // 1) Time up.
-    // 2) All buildings destroyed (excluding walls).
-    // 3) All troops deployed and all are dead.
-    // NOTE: Destroying the TownHall does NOT end the battle immediately.
+    
+    
+    
+    
+    
     bool townHallDestroyed = isTownHallDestroyed();
     bool allNonWallDestroyed = areAllNonWallBuildingsDestroyed();
     bool allTroopsGone = areAllTroopsDeployedAndDead();
 
-    // Avoid ending immediately if player hasn't deployed anything yet.
+    
     if (!_hasDeployedAnyTroop) {
         allTroopsGone = false;
     }
@@ -845,7 +886,7 @@ void BattleScene::checkBattleResult(bool timeUp)
     bool shouldEnd = timeUp || allNonWallDestroyed || allTroopsGone;
     if (!shouldEnd) return;
 
-    // Result logic: TownHall destroyed -> victory, otherwise defeated.
+    
     bool win = townHallDestroyed;
 
     endBattleAndShowResult(win);
@@ -855,7 +896,7 @@ void BattleScene::update(float dt)
 {
     if (_phase == Phase::End) return;
 
-    // Pause battle logic and countdown when a modal popup is open.
+    
     if (_pausedByPopup) return;
 
     _phaseRemaining -= dt;
@@ -869,7 +910,7 @@ void BattleScene::update(float dt)
         }
         if (_phase == Phase::Battle)
         {
-            // Time up -> determine win/lose.
+            
             checkBattleResult(true);
             return;
         }
@@ -879,13 +920,13 @@ void BattleScene::update(float dt)
     {
         _ai.update(dt, _units, _enemyBuildings);
 
-        // Collect loot from newly destroyed buildings (one-time).
         
-// Loot progression:
-// - Gold/Elixir storages: loot is proportional to HP lost (up to 50% from that storage).
-// - TownHall: loot can only be obtained when the TownHall is completely destroyed.
-// NOTE: We DO NOT apply loot to village saves during the battle.
-// The real resource changes happen only once, at battle settlement.
+        
+
+
+
+
+
 for (auto& eb : _enemyBuildings)
 {
     if (!eb.building) continue;
@@ -893,7 +934,7 @@ for (auto& eb : _enemyBuildings)
     int hpNow = eb.building->hp;
     int hpMax = std::max(1, eb.building->hpMax);
 
-    if (eb.id == 9) // TownHall
+    if (eb.id == 9) 
     {
         if (hpNow <= 0 && !eb.lootCollected)
         {
@@ -917,7 +958,7 @@ for (auto& eb : _enemyBuildings)
         continue;
     }
 
-    if (eb.id == 4 || eb.id == 6 || eb.id == 3 || eb.id == 5) // Elixir Storage / Gold Storage / Collector / Mine
+    if (eb.id == 4 || eb.id == 6 || eb.id == 3 || eb.id == 5) 
     {
         float destroyed = (float)(hpMax - hpNow) / (float)hpMax;
         destroyed = std::max(0.0f, std::min(1.0f, destroyed));
@@ -967,22 +1008,22 @@ void BattleScene::endBattleAndShowResult(bool win)
     _phase = Phase::End;
     _phaseRemaining = 0.0f;
 
-    // Stop the battle loop.
+    
     this->unscheduleUpdate();
     updateBattleHUD();
 
-    // Close any modal popups.
+    
     if (_abandonMask) {
         _abandonMask->removeFromParent();
         _abandonMask = nullptr;
     }
     _pausedByPopup = false;
 
-    // Apply loot to both villages and persist once at battle settlement.
+    
     settleBattleLoot();
     persistBattleSaves();
 
-    // SFX: battle result.
+    
     if (win) SoundManager::playSfxRandom("battle_win", 1.0f);
     else     SoundManager::playSfxRandom("battle_lost", 1.0f);
 
@@ -1016,13 +1057,13 @@ void BattleScene::showBattleResultPopup(bool win)
     panelListener->onTouchBegan = [](Touch*, Event*) { return true; };
     _eventDispatcher->addEventListenerWithSceneGraphPriority(panelListener, panel);
 
-    // Title
+    
     auto title = Label::createWithSystemFont(win ? "victory" : "defeated", "Arial", 78);
     title->setColor(Color3B::BLACK);
     title->setPosition(Vec2(panelW * 0.5f, panelH - 80.0f));
     panel->addChild(title);
 
-    // Loot summary (raw looted values).
+    
     auto goldLbl = Label::createWithSystemFont(StringUtils::format("Gold: %d", std::max(0, _lootedGold)), "Arial", 36);
     goldLbl->setColor(Color3B::BLACK);
     goldLbl->setAnchorPoint(Vec2(0.5f, 0.5f));
@@ -1035,7 +1076,7 @@ void BattleScene::showBattleResultPopup(bool win)
     elixirLbl->setPosition(Vec2(panelW * 0.5f, panelH - 215.0f));
     panel->addChild(elixirLbl);
 
-    // Troops deployed = troop losses (as requested).
+    
     std::string lines;
     auto troopName = [](int type) -> std::string {
         switch (type) {
@@ -1056,8 +1097,8 @@ void BattleScene::showBattleResultPopup(bool win)
         if (!lines.empty()) lines += "\n";
         lines += troopName(type);
         lines += "  ";
-        // Use a unicode escape to avoid source-encoding issues on Windows (MSVC).
-        // "\u00D7" = multiplication sign.
+        
+        
         lines += u8"\u00D7";
         lines += StringUtils::format("%d", cnt);
     }
@@ -1075,11 +1116,11 @@ void BattleScene::showBattleResultPopup(bool win)
     lossLbl->setPosition(Vec2(panelW * 0.5f, panelH - 320.0f));
     panel->addChild(lossLbl);
 
-    // Return button
+    
     auto retLabel = Label::createWithSystemFont("return", "Arial", 46);
     retLabel->setColor(Color3B::BLACK);
     auto retItem = MenuItemLabel::create(retLabel, [this](Ref*) {
-        // Ensure settlement is applied, then persist.
+        
         settleBattleLoot();
         persistBattleSaves();
         SaveSystem::setBattleTargetSlot(-1);
@@ -1129,7 +1170,7 @@ void BattleScene::openAbandonConfirmPopup()
     yesLbl->setColor(Color3B::BLACK);
     auto yesItem = MenuItemLabel::create(yesLbl, [this](Ref*) {
         closeAbandonConfirmPopup(false);
-        // Abandon is treated as defeated.
+        
         endBattleAndShowResult(false);
     });
 
@@ -1200,7 +1241,7 @@ void BattleScene::openEscMenu()
 
     auto backLabel = Label::createWithSystemFont("Back to Start", "Arial", 42);
     auto backItem = MenuItemLabel::create(backLabel, [this](Ref*) {
-        // Leaving early: treat as settlement with current looted values.
+        
         settleBattleLoot();
         persistBattleSaves();
         closeEscMenu();
@@ -1412,7 +1453,7 @@ void BattleScene::refreshTroopBar()
     float x = 20.0f;
     float y = 12.0f;
     float gap = 10.0f;
-    const float kBarIconSide = 70.0f; // clamp icon size (Wall Breaker icon can be huge)
+    const float kBarIconSide = 70.0f; 
 
     for (int type = 1; type <= 4; ++type)
     {
@@ -1443,7 +1484,7 @@ void BattleScene::refreshTroopBar()
         Size isz = icon->getContentSize() * iconScale;
         slotRoot->setContentSize(isz);
 
-        // Count label at the top-right corner (inside the icon).
+        
         auto cntLbl = Label::createWithSystemFont("x" + std::to_string(count), "Arial", 18);
         cntLbl->setAnchorPoint(Vec2(1.0f, 1.0f));
         cntLbl->setColor(Color3B::WHITE);
@@ -1452,7 +1493,7 @@ void BattleScene::refreshTroopBar()
         slotRoot->addChild(cntLbl, 2);
 
         
-// Troop level label (center).
+
 {
     int lv = 1;
     auto itLv = _troopLevels.find(type);
@@ -1460,12 +1501,12 @@ void BattleScene::refreshTroopBar()
 
     auto lvLbl = Label::createWithSystemFont(StringUtils::format("LV%d", lv), "Arial", 28);
     lvLbl->setColor(Color3B::BLACK);
-    // Use outline to make the text thicker while keeping a black fill.
+    
     lvLbl->enableOutline(Color4B::BLACK, 3);
     lvLbl->setAnchorPoint(Vec2(0.5f, 0.5f));
     lvLbl->setPosition(Vec2(isz.width * 0.5f, isz.height * 0.5f));
 
-    // Keep the label inside the icon.
+    
     float maxW = isz.width * 0.95f;
     float maxH = isz.height * 0.60f;
     float bw = lvLbl->getContentSize().width;
@@ -1477,7 +1518,7 @@ void BattleScene::refreshTroopBar()
 
     slotRoot->addChild(lvLbl, 2);
 }
-        // "selected" indicator. Visible only when this troop is selected.
+        
         auto selLbl = Label::createWithSystemFont("selected", "Arial", 16);
         selLbl->setAnchorPoint(Vec2(0.5f, 0.5f));
         selLbl->setPosition(Vec2(isz.width * 0.5f, isz.height * 0.5f));
@@ -1496,7 +1537,7 @@ void BattleScene::refreshTroopBar()
         x += isz.width + gap;
     }
 
-    // Re-apply selected state after rebuilding UI.
+    
     setSelectedTroop(_selectedTroopType);
 }
 
@@ -1515,11 +1556,11 @@ bool BattleScene::handleTroopBarClick(const cocos2d::Vec2& glPos)
         return cocos2d::Rect(minX, minY, maxX - minX, maxY - minY);
     };
 
-    // IMPORTANT CHANGE:
-    // The whole troop-bar row area must block map interactions (no troop deployment on this row).
-    // Only the troop icons are clickable; clicking empty space in the row does nothing but is consumed.
+    
+    
+    
 
-    // _troopBar->getBoundingBox() is in its PARENT space (HUD), so convert it to world.
+    
     cocos2d::Rect barLocal = _troopBar->getBoundingBox();
     cocos2d::Node* hud = _troopBar->getParent();
     cocos2d::Vec2 barA = hud ? hud->convertToWorldSpace(barLocal.origin) : barLocal.origin;
@@ -1532,13 +1573,13 @@ bool BattleScene::handleTroopBarClick(const cocos2d::Vec2& glPos)
         std::fabs(barB.y - barA.y)
     );
 
-    // Build a union rect that covers: the bar background + all icon rectangles (icons may extend above).
+    
     float minX = barRect.getMinX();
     float minY = barRect.getMinY();
     float maxX = barRect.getMaxX();
     float maxY = barRect.getMaxY();
 
-    // First: check troop icons (the only clickable elements in this row).
+    
     for (const auto& slot : _troopSlots)
     {
         if (!slot.root) continue;
@@ -1555,14 +1596,14 @@ bool BattleScene::handleTroopBarClick(const cocos2d::Vec2& glPos)
             SoundManager::playSfxRandom("button_click", 1.0f);
             if (_selectedTroopType == slot.type) setSelectedTroop(-1);
             else setSelectedTroop(slot.type);
-            return true; // consumed
+            return true; 
         }
     }
 
     cocos2d::Rect rowRect(minX, minY, maxX - minX, maxY - minY);
     if (rowRect.containsPoint(glPos))
     {
-        // Clicked on empty space in the troop row: consume but do nothing.
+        
         return true;
     }
 
@@ -1583,7 +1624,7 @@ bool BattleScene::isPosInTroopBar(const cocos2d::Vec2& glPos) const
         return cocos2d::Rect(minX, minY, maxX - minX, maxY - minY);
     };
 
-    // Build a union rect for the entire troop row area (icons + background).
+    
     cocos2d::Rect barLocal = _troopBar->getBoundingBox();
     cocos2d::Node* hud = _troopBar->getParent();
     cocos2d::Vec2 barA = hud ? hud->convertToWorldSpace(barLocal.origin) : barLocal.origin;
@@ -1628,9 +1669,9 @@ static bool pointInTriangle(const cocos2d::Vec2& p, const cocos2d::Vec2& a, cons
 
 bool BattleScene::isPosInDeployArea(const cocos2d::Vec2& worldLocal) const
 {
-    if (!_deployAreaReady) return true; // if not ready, do not block deployment
+    if (!_deployAreaReady) return true; 
 
-    // Diamond as 2 triangles: (top, right, bottom) and (top, bottom, left).
+    
     if (pointInTriangle(worldLocal, _deployTop, _deployRight, _deployBottom)) return true;
     if (pointInTriangle(worldLocal, _deployTop, _deployBottom, _deployLeft)) return true;
     return false;
@@ -1638,9 +1679,9 @@ bool BattleScene::isPosInDeployArea(const cocos2d::Vec2& worldLocal) const
 
 cocos2d::Vec2 BattleScene::worldToGridFloat(const cocos2d::Vec2& worldLocal) const
 {
-    // Inverse transform of gridToWorld:
-    // x = anchor.x + (c - r) * (tileW/2)
-    // y = anchor.y - (c + r) * (tileH/2)
+    
+    
+    
     float hw = std::max(0.0001f, _tileW * 0.5f);
     float hh = std::max(0.0001f, _tileH * 0.5f);
     float dx = (worldLocal.x - _anchor.x) / hw;
@@ -1679,9 +1720,9 @@ void BattleScene::rebuildDeployBlockedMap()
 
     for (const auto& eb : _enemyBuildings)
     {
-        // Footprint rule matches MainScene:
-        //  - Wall (id==10): 1x1
-        //  - Other buildings: 3x3 centered at (r,c)
+        
+        
+        
         std::vector<cocos2d::Vec2> footprint;
         if (eb.id == 10) {
             footprint.push_back(cocos2d::Vec2(eb.r, eb.c));
@@ -1691,7 +1732,7 @@ void BattleScene::rebuildDeployBlockedMap()
                     footprint.push_back(cocos2d::Vec2(eb.r + dr, eb.c + dc));
         }
 
-        // Expand outward by 1 tile (outer ring) -> cannot deploy.
+        
         for (const auto& cell : footprint) {
             int rr = (int)cell.x;
             int cc = (int)cell.y;
@@ -1707,7 +1748,7 @@ void BattleScene::ensureDeployOverlay()
     if (_deployOverlay || !_world) return;
     _deployOverlay = cocos2d::DrawNode::create();
     _deployOverlay->setVisible(false);
-    // Draw above background but below buildings.
+    
     _world->addChild(_deployOverlay, 2);
 }
 
@@ -1731,7 +1772,7 @@ void BattleScene::rebuildDeployOverlay()
         _deployOverlay->drawSolidPoly(verts, 4, color);
     };
 
-    // Only draw blocked cells inside the deployable diamond.
+    
     for (int r = 0; r < _rows; ++r) {
         for (int c = 0; c < _cols; ++c) {
             if (!isGridBlocked(r, c)) continue;
@@ -1763,12 +1804,12 @@ void BattleScene::setSelectedTroop(int troopType)
         bool selected = (slot.type == _selectedTroopType) && (_selectedTroopType != -1);
         if (slot.selectedLabel) slot.selectedLabel->setVisible(selected);
         if (slot.root) {
-            // Slight highlight by scaling when selected
+            
             slot.root->setScale(selected ? 1.05f : 1.0f);
         }
     }
 
-    // Show/hide blocked deployment overlay based on selection state.
+    
     updateDeployOverlayVisibility();
 }
 
@@ -1795,13 +1836,13 @@ void BattleScene::deploySelectedTroop(const cocos2d::Vec2& glPos)
 {
     if (_battleEnded || _phase == Phase::End) return;
 
-    // Prevent duplicate deployment when multiple input systems fire for a single click/tap.
+    
     long long nowMs = std::chrono::duration_cast<std::chrono::milliseconds>(
         std::chrono::steady_clock::now().time_since_epoch()).count();
     if (nowMs - _lastDeployMs < 50) return;
     _lastDeployMs = nowMs;
 
-    // Safety guard: clicking on troop UI should never deploy or consume troops.
+    
     if (isPosInTroopBar(glPos)) return;
 
     if (_selectedTroopType == -1) return;
@@ -1815,10 +1856,10 @@ void BattleScene::deploySelectedTroop(const cocos2d::Vec2& glPos)
     if (!_world) return;
     cocos2d::Vec2 worldLocal = _world->convertToNodeSpace(glPos);
 
-    // Only allow deployment inside the main diamond area.
+    
     if (!isPosInDeployArea(worldLocal)) return;
 
-    // Block deployment near enemy buildings (footprint expanded by 1 tile).
+    
     int gr = 0, gc = 0;
     if (!worldToGrid(worldLocal, gr, gc)) return;
     if (isGridBlocked(gr, gc)) {
@@ -1828,10 +1869,10 @@ void BattleScene::deploySelectedTroop(const cocos2d::Vec2& glPos)
 
     if (!spawnUnit(_selectedTroopType, worldLocal)) return;
 
-    // Record deployed troop count (used as "losses" in the result popup).
+    
     _deployedCounts[_selectedTroopType] += 1;
 
-    // Play deploy SFX (Resources/music).
+    
     if (_selectedTroopType == 2) {
         SoundManager::playSfx("music/archer_deploy_09.ogg", 1.0f);
     }
@@ -1845,7 +1886,7 @@ void BattleScene::deploySelectedTroop(const cocos2d::Vec2& glPos)
         SoundManager::playSfx("music/troop_housing_placing_06.ogg", 1.0f);
     }
 
-    // First successful deployment skips scout phase immediately.
+    
     if (!_hasDeployedAnyTroop) {
         _hasDeployedAnyTroop = true;
         if (_phase == Phase::Scout) {
@@ -1862,7 +1903,7 @@ bool BattleScene::spawnUnit(int unitId, const cocos2d::Vec2& worldLocalPos)
     if (_battleEnded) return false;
     if (!_world) return false;
 
-    // Create a unit with the attacker's laboratory level.
+    
     int unitLv = 1;
     auto itLv = _troopLevels.find(unitId);
     if (itLv != _troopLevels.end()) unitLv = itLv->second;
@@ -1872,21 +1913,21 @@ bool BattleScene::spawnUnit(int unitId, const cocos2d::Vec2& worldLocalPos)
         return false;
     }
 
-    // Convert tile-based stats into pixels (range/move).
-    // _cellSizePx is computed from the current enemy map diamond.
+    
+    
     float cell = (_cellSizePx > 0.001f) ? _cellSizePx : 32.0f;
     u->attackRange = std::max(8.0f, u->attackRangeTiles * cell);
-    // Movement speed stat is CoC-style (bigger = faster). We map it to px/s.
-    // Requirement: all troop movement speeds are divided by 2.
+    
+    
     u->moveSpeed = std::max(2.0f, (u->moveSpeedStat * (cell * 0.25f)) / 2.0f);
 
     cocos2d::Sprite* spr = u->createSprite();
     if (!spr) spr = cocos2d::Sprite::create();
 
-    // Foot anchor looks much better on isometric ground.
+    
     spr->setAnchorPoint(cocos2d::Vec2(0.5f, 0.0f));
 
-    // Fit the unit roughly into one tile.
+    
     float maxW = (_tileW > 0.0f) ? (_tileW * 0.55f) : 48.0f;
     float maxH = (_tileH > 0.0f) ? (_tileH * 0.55f) : 48.0f;
     cocos2d::Size cs = spr->getContentSize();
@@ -1899,7 +1940,7 @@ bool BattleScene::spawnUnit(int unitId, const cocos2d::Vec2& worldLocalPos)
 
     spr->setPosition(worldLocalPos);
 
-    // Use r+c as z-order so troops stay correctly layered.
+    
     int r = 0, c = 0;
     int z = 20;
     if (worldToGrid(worldLocalPos, r, c)) {
@@ -1942,7 +1983,7 @@ void BattleScene::setupLootHUD()
     float x0 = origin.x + marginX;
     float yTop = origin.y + visibleSize.height - marginY;
 
-    // Section titles
+    
     _lootableTitle = cocos2d::Label::createWithSystemFont("Lootable", "Arial", 18);
     _lootableTitle->setAnchorPoint(cocos2d::Vec2(0.0f, 1.0f));
     _lootableTitle->setPosition(cocos2d::Vec2(x0, yTop));

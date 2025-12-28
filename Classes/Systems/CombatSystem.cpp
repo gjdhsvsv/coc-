@@ -1,3 +1,5 @@
+// File: CombatSystem.cpp
+// Brief: Implements the CombatSystem component.
 #include "Systems/CombatSystem.h"
 
 #include "Patterns/AttackVisitor.h"
@@ -8,12 +10,84 @@
 
 #include <algorithm>
 #include <cmath>
+#include <string>
 
 using namespace cocos2d;
 
+namespace {
+
+/**
+ * Computes the best-matching cannon barrel sprite for the current target direction.
+ *
+ * The project provides 6 directional cannon sprites (N, NE, SE, S, SW, NW). We approximate
+ * the direction by the angle from the cannon center to the target, then snap it to the
+ * closest 60-degree sector.
+ */
+std::string GetCannonFacingTexturePath(const Vec2& cannonPos, const Vec2& targetPos)
+{
+    const float dx = targetPos.x - cannonPos.x;
+    const float dy = targetPos.y - cannonPos.y;
+
+    // Avoid unstable facing when both positions are extremely close.
+    if (std::abs(dx) < 0.001f && std::abs(dy) < 0.001f)
+    {
+        return "cannon/cannon_south.png";
+    }
+
+    const float rad = std::atan2(dy, dx);
+    const float deg = rad * 57.2957795f;  // [-180, 180]
+
+    // Sector centers: N(90), NE(30-60), SE(-30), S(-90), SW(-150), NW(150).
+    if (deg >= 60.0f && deg < 120.0f) return "cannon/cannon_north.png";
+    if (deg >= 0.0f && deg < 60.0f)   return "cannon/cannon_northeast.png";
+    if (deg >= -60.0f && deg < 0.0f)  return "cannon/cannon_southeast.png";
+    if (deg >= -120.0f && deg < -60.0f) return "cannon/cannon_south.png";
+    if (deg >= -180.0f && deg < -120.0f) return "cannon/cannon_southwest.png";
+    // deg in [120, 180]
+    return "cannon/cannon_northwest.png";
+}
+
+/**
+ * Updates the cannon sprite texture to match the target direction.
+ *
+ * Note: We preserve the node's position and anchor. We may adjust its scale to keep the
+ * cannon constrained to a consistent on-screen footprint when different facing textures
+ * have different source pixel sizes.
+ */
+void UpdateCannonFacingSprite(Sprite* cannonSprite, const Vec2& cannonPos, const Vec2& targetPos)
+{
+    if (!cannonSprite) return;
+
+    // Preserve the current on-screen size of the cannon before swapping textures.
+    // The directional cannon textures may have different raw pixel dimensions, and
+    // without this, the cannon would visually "grow" or "shrink" when its facing
+    // changes.
+    const Size oldWorldSize = cannonSprite->getBoundingBox().size;
+
+    const std::string texPath = GetCannonFacingTexturePath(cannonPos, targetPos);
+    auto* tex = Director::getInstance()->getTextureCache()->addImage(texPath);
+    if (!tex) return;
+
+    cannonSprite->setTexture(tex);
+    const Size ts = tex->getContentSize();
+    cannonSprite->setTextureRect(Rect(0, 0, ts.width, ts.height));
+
+    // Re-apply a scale so the sprite remains bounded by the same world-space box.
+    // We keep aspect ratio to avoid stretching the art.
+    if (ts.width > 0.0f && ts.height > 0.0f && oldWorldSize.width > 0.0f && oldWorldSize.height > 0.0f)
+    {
+        const float sx = oldWorldSize.width / ts.width;
+        const float sy = oldWorldSize.height / ts.height;
+        const float s = std::min(sx, sy);
+        cannonSprite->setScale(std::max(0.0001f, s));
+    }
+}
+
+}  // namespace
+
 static void playUnitHitSfx(const UnitBase& attacker, const Building& target)
 {
-    // Special case: stealing resources sounds override generic attack sounds.
+    
     if (dynamic_cast<const GoldMine*>(&target) || dynamic_cast<const GoldStorage*>(&target))
     {
         SoundManager::playSfxRandom("coin_steal", 1.0f);
@@ -27,16 +101,16 @@ static void playUnitHitSfx(const UnitBase& attacker, const Building& target)
 
     switch (attacker.unitId)
     {
-    case 2: // archer
+    case 2: 
         SoundManager::playSfxRandom("arrow_hit", 1.0f);
         break;
-    case 3: // giant
+    case 3: 
         SoundManager::playSfxRandom("giant_attack", 1.0f);
         break;
-    case 4: // wall breaker
+    case 4: 
         SoundManager::playSfxRandom("wall_breaker_attack", 1.0f);
         break;
-    default: // barbarian
+    default: 
         SoundManager::playSfxRandom("barbarian_hit_stuff", 1.0f);
         break;
     }
@@ -98,29 +172,29 @@ void CombatSystem::ensureHpBar(Sprite* sprite, int hp, int hpMax, bool isUnit)
     LayerColor* bg = nullptr;
     LayerColor* fill = nullptr;
 
-    // ¸üÐ¡Ò»µã
+    
     const float w = isUnit ? 40.0f : 48.0f;
     const float h = 5.0f;
     const float pad = 1.0f;
 
-    // ¡ï¹Ø¼ü£ºÓÃÃªµã×÷Îª»ù×¼£¬±£Ö¤¡°¾«×¼ÔÚµ¥Î»½ÅÏÂ¡±
-    Vec2 ap = sprite->getAnchorPointInPoints();          // ÃªµãÔÚ sprite ±¾µØ×ø±êÖÐµÄÎ»ÖÃ
-    float gapUnder = 7.0f;                               // Äã¿ÉÒÔÎ¢µ÷£º6~12 ¶¼ÐÐ
-    float yUnit = ap.y - (h * 0.5f + gapUnder);          // µ¥Î»ÑªÌõ£ºÃªµãÕýÏÂ·½
-    float yBuilding = sprite->getContentSize().height + 12.0f; // ½¨Öþ£ºÈÔÔÚÉÏ·½
+    
+    Vec2 ap = sprite->getAnchorPointInPoints();          
+    float gapUnder = 7.0f;                               
+    float yUnit = ap.y - (h * 0.5f + gapUnder);          
+    float yBuilding = sprite->getContentSize().height + 12.0f; 
 
     if (!bar)
     {
         bar = Node::create();
         bar->setName(HPBAR_NAME);
 
-        // ÑªÌõ´óÐ¡²»Ëæ sprite Ëõ·Å±ä»¯
+        
         float sx = std::max(0.001f, sprite->getScaleX());
         float sy = std::max(0.001f, sprite->getScaleY());
         bar->setScaleX(1.0f / sx);
         bar->setScaleY(1.0f / sy);
 
-        // ¡ï¶¨Î»£ºµ¥Î»½ÅÏÂ / ½¨ÖþÉÏ·½
+        
         bar->setPosition(Vec2(std::round(ap.x), std::round(isUnit ? yUnit : yBuilding)));
         sprite->addChild(bar, 999);
 
@@ -142,7 +216,7 @@ void CombatSystem::ensureHpBar(Sprite* sprite, int hp, int hpMax, bool isUnit)
     }
     else
     {
-        // ¡ïÈç¹û sprite Ãªµã/³ß´ç²»Í¬£¬ÔËÐÐÊ±Ò²¸ú×ÅÖØÐÂ¶¨Î»Ò»´Î£¨±£³Ö¾«×¼£©
+        
         bar->setPosition(Vec2(std::round(ap.x), std::round(isUnit ? yUnit : yBuilding)));
 
         bg = dynamic_cast<LayerColor*>(bar->getChildByName(HPBG_NAME));
@@ -155,7 +229,7 @@ void CombatSystem::ensureHpBar(Sprite* sprite, int hp, int hpMax, bool isUnit)
     pct = std::max(0.0f, std::min(1.0f, pct));
     fill->setScaleX(pct);
 
-    // ÈÔ±£Áô£º½¨ÖþÂúÑªÒþ²Ø£¨ÄãÒ²¿ÉÒÔ¸Ä³ÉÒ»Ö±ÏÔÊ¾£©
+    
     if (!isUnit) bar->setVisible(pct < 0.999f);
     else bar->setVisible(true);
 }
@@ -177,7 +251,7 @@ bool CombatSystem::tryUnitAttackBuilding(UnitBase& attacker,
     if (!isInRange(ap, tp, attacker.attackRange))
         return false;
 
-    // SFX: unit hit / stealing resources.
+    
     playUnitHitSfx(attacker, target);
 
     int dmg = AttackVisitor::computeDamage(attacker, target);
@@ -186,7 +260,7 @@ bool CombatSystem::tryUnitAttackBuilding(UnitBase& attacker,
 
     attacker.startAttackCooldown();
 
-    // UI feedback
+    
     punchScale(targetSprite, 12345);
     ensureHpBar(targetSprite, target.hp, target.hpMax, false);
     showDamage(targetSprite->getParent(), tp, dmg);
@@ -205,7 +279,7 @@ bool CombatSystem::unitHitBuildingNoRange(UnitBase& attacker,
 
     Vec2 tp = targetSprite->getPosition();
 
-    // SFX: unit hit / stealing resources.
+    
     playUnitHitSfx(attacker, target);
 
     int dmg = AttackVisitor::computeDamage(attacker, target);
@@ -228,7 +302,7 @@ bool CombatSystem::tryBomberExplode(UnitBase& bomber,
     if (!bomberSprite || !targetWall.sprite || !targetWall.building) return false;
     if (bomber.isDead()) return false;
     if (targetWall.building->hp <= 0) return false;
-    if (targetWall.id != 10) return false; // must be wall
+    if (targetWall.id != 10) return false; 
 
     if (!bomber.canAttack()) return false;
 
@@ -237,10 +311,10 @@ bool CombatSystem::tryBomberExplode(UnitBase& bomber,
     if (!isInRange(bp, wp, bomber.attackRange))
         return false;
 
-    // SFX: wall breaker explosion/attack.
+    
     SoundManager::playSfxRandom("wall_breaker_attack", 1.0f);
 
-    // Explode: deal high damage to nearby walls, then self-destruct.
+    
     const WallBreaker* wb = dynamic_cast<const WallBreaker*>(&bomber);
     int multiplier = wb ? wb->wallDamageMultiplier : 40;
     float radiusTiles = wb ? wb->damageRadiusTiles : 2.0f;
@@ -267,10 +341,10 @@ bool CombatSystem::tryBomberExplode(UnitBase& bomber,
         showDamage(e.sprite->getParent(), e.sprite->getPosition(), wallDmg);
     }
 
-    // self-destruct
+    
     bomber.hp = 0;
 
-    // small visual cue (placeholder)
+    
     showDamage(bomberSprite->getParent(), bp, 999);
     bomber.startAttackCooldown();
     return true;
@@ -288,7 +362,7 @@ bool CombatSystem::bomberExplodeNoRange(UnitBase& bomber,
 
     if (!bomber.canAttack()) return false;
 
-    // Reuse the same explode logic as tryBomberExplode, but WITHOUT any range check.
+    
     const WallBreaker* wb = dynamic_cast<const WallBreaker*>(&bomber);
     int multiplier = wb ? wb->wallDamageMultiplier : 40;
     float radiusTiles = wb ? wb->damageRadiusTiles : 2.0f;
@@ -315,7 +389,7 @@ bool CombatSystem::bomberExplodeNoRange(UnitBase& bomber,
         showDamage(e.sprite->getParent(), e.sprite->getPosition(), wallDmg);
     }
 
-    // self-destruct
+    
     bomber.hp = 0;
 
     Vec2 bp = bomberSprite->getPosition();
@@ -363,7 +437,7 @@ bool CombatSystem::tryDefenseShoot(float dt,
     cooldown -= dt;
     if (cooldown > 0.0f) return false;
 
-    // nearest unit in range
+    
     int best = -1;
     float bestDist = 1e30f;
     Vec2 ep = defenseSprite->getPosition();
@@ -381,22 +455,28 @@ bool CombatSystem::tryDefenseShoot(float dt,
             best = i;
         }
     }
-
     if (best < 0) return false;
 
-    // SFX: defense firing.
+    // Lock the victim now so both facing and damage are applied to the same unit.
+    auto& victim = units[best];
+
+    // If this defense is a cannon, rotate its barrel sprite towards the chosen victim.
+    // We do this before playing SFX/damage so the feedback feels immediate.
+    if (dynamic_cast<Cannon*>(&defense) && victim.sprite)
+    {
+        UpdateCannonFacingSprite(defenseSprite, ep, victim.sprite->getPosition());
+    }
+
     if (dynamic_cast<ArrowTower*>(&defense)) {
         SoundManager::playSfxRandom("arrow_hit", 1.0f);
     } else if (dynamic_cast<Cannon*>(&defense)) {
         SoundManager::playSfxRandom("cannon_attack", 1.0f);
     }
-
     int dmg = (int)std::ceil(std::max(1.0f, dmgPerHit));
-    auto& victim = units[best];
 
     victim.unit->takeDamage(dmg);
 
-    // UI feedback
+    
     ensureHpBar(victim.sprite, victim.unit->hp, victim.unit->hpMax, true);
     showDamage(victim.sprite ? victim.sprite->getParent() : nullptr,
         victim.sprite ? victim.sprite->getPosition() : ep, dmg);

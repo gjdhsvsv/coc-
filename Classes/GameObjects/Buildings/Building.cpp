@@ -1,3 +1,5 @@
+// File: Building.cpp
+// Brief: Implements the Building component.
 #include "GameObjects/Buildings/Building.h"
 #include "GameObjects/Buildings/DefenseBuilding.h"
 #include "GameObjects/Buildings/ResourceBuilding.h"
@@ -10,9 +12,9 @@
 
 using namespace std;
 
-// Resolve resource in a way that respects cocos2d-x search paths.
-// IMPORTANT: We prefer keeping canonical relative paths ("ui/...", "buildings/..."),
-// because many projects already add "Resources" as a search path.
+
+
+
 static bool CanResolveResource(const std::string& relPath)
 {
     auto fu = cocos2d::FileUtils::getInstance();
@@ -22,7 +24,7 @@ static bool CanResolveResource(const std::string& relPath)
 
 static std::string FallbackResourcePath(const std::string& relPath)
 {
-    // Keep canonical relative paths whenever possible.
+    
     if (CanResolveResource(relPath)) return relPath;
 
     const std::string tries[] = {
@@ -38,16 +40,16 @@ static std::string FallbackResourcePath(const std::string& relPath)
 }
 
 
-// Select sprite image path by building type and level.
-// NOTE:
-// - buildings1 (ArrowTower), buildings2 (Cannon), buildings5 (GoldMine) stay as old images.
-// - Others should switch to the leveled images: buildings/building{index}L{level}.png
-//   where index mapping follows the resource folder convention.
+
+
+
+
+
 static void updateBuildingImageByLevel(Building* b, int id, int level)
 {
     if (!b) return;
 
-    // Clamp to existing resource set (project uses 1..5 levels).
+    
     level = std::max(1, std::min(5, level));
 
     int imageIndex = -1;
@@ -55,45 +57,45 @@ static void updateBuildingImageByLevel(Building* b, int id, int level)
 
     switch (id)
     {
-    case 9:  // Town Hall uses building0L*
+    case 9:  
         imageIndex = 0;
         fallback = "buildings/buildings0.png";
         break;
-    case 3:  // Elixir Collector uses building3L*
+    case 3:  
         imageIndex = 3;
         fallback = "buildings/buildings3.png";
         break;
-    case 4:  // Elixir Storage uses building4L*
+    case 4:  
         imageIndex = 4;
         fallback = "buildings/buildings4.png";
         break;
-    case 6:  // Gold Storage uses building6L*
+    case 6:  
         imageIndex = 6;
         fallback = "buildings/buildings6.png";
         break;
-    case 7:  // Barracks (Army Camp) uses building7L*
+    case 7:  
         imageIndex = 7;
         fallback = "buildings/buildings7.png";
         break;
-    case 8:  // Training Camp uses building8L*
+    case 8:  
         imageIndex = 8;
         fallback = "buildings/buildings8.png";
         break;
-    case 10: // Wall uses building9L*
+    case 10: 
         imageIndex = 9;
         fallback = "buildings/buildings9.png";
         break;
-    case 11: // Laboratory uses building11L*
+    case 11: 
         imageIndex = 11;
         fallback = "buildings/building11L1.png";
         break;
     default:
-        // Keep the original image for buildings1/2/5 and any other types.
+        
         return;
     }
 
-    // Keep canonical relative paths whenever possible so Sprite::create(...) works with existing
-    // cocos2d-x search paths (most projects already add "Resources" as a search path).
+    
+    
     std::string leveled = "buildings/building" + std::to_string(imageIndex) + "L" + std::to_string(level) + ".png";
     leveled = FallbackResourcePath(leveled);
     if (CanResolveResource(leveled)) {
@@ -101,14 +103,14 @@ static void updateBuildingImageByLevel(Building* b, int id, int level)
         return;
     }
 
-    // Fall back to old non-leveled assets.
+    
     fallback = FallbackResourcePath(fallback);
     if (CanResolveResource(fallback)) {
         b->image = fallback;
         return;
     }
 
-    // Absolute last-resort placeholder to keep the building visible.
+    
     b->image = "buildings/buildings0.png";
 }
 
@@ -188,7 +190,7 @@ namespace BuildingFactory {
             auto bk = dynamic_cast<Barracks*>(b);
             if (bk) {
                 bk->setupStats(level);
-                if (applyCaps) bk->applyCap(); // Apply population cap immediately if allowed.
+                if (applyCaps) bk->applyCap(); 
             }
         }
         else if (id == 8) {
@@ -200,7 +202,7 @@ namespace BuildingFactory {
             if (lab) lab->setupStats(level);
         }
 
-        // Update sprite image after stats (some buildings switch image by level).
+        
         updateBuildingImageByLevel(b, id, level);
     }
 }

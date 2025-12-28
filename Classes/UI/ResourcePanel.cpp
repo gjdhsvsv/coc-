@@ -1,3 +1,5 @@
+// File: ResourcePanel.cpp
+// Brief: Implements the ResourcePanel component.
 #include "UI/ResourcePanel.h"
 #include <chrono>
 using namespace cocos2d;
@@ -27,10 +29,10 @@ bool ResourcePanel::init() {
     _menu->setPosition(Vec2::ZERO);
     addChild(_menu, 2);
 
-    // Debug/cheat buttons (requested):
-    // 1) Fill Gold
-    // 2) Fill Elixir
-    // 3) Toggle time scale (x100)
+    
+    
+    
+    
     _menu->setVisible(true);
 
     auto goldText = Label::createWithSystemFont("Fill Gold", "Arial", 16);
@@ -47,7 +49,7 @@ bool ResourcePanel::init() {
     timeText->setColor(Color3B::BLACK);
     _timeItem = MenuItemLabel::create(timeText, [this, timeText](cocos2d::Ref*) {
         const long long nowMs = (long long)std::chrono::duration_cast<std::chrono::milliseconds>(std::chrono::steady_clock::now().time_since_epoch()).count();
-        // Debounce cheat toggle to avoid repeated clicks spamming timeScale.
+        
         if (_lastCheatMs != 0 && nowMs - _lastCheatMs < 400) return;
         _lastCheatMs = nowMs;
 _timeActive = !_timeActive;
@@ -74,9 +76,9 @@ _timeActive = !_timeActive;
 
 void ResourcePanel::onExit()
 {
-    // ResourceManager currently supports only ONE global callback.
-    // When leaving the scene (e.g., entering BattleScene), clear the callback to avoid
-    // calling into a destroyed panel when ResourceManager changes.
+    
+    
+    
     ResourceManager::onChanged(std::function<void(const Resources&)>());
     cocos2d::Node::onExit();
 }
@@ -85,18 +87,18 @@ void ResourcePanel::setPanelScale(float s) {
     layout();
 }
 void ResourcePanel::updateTexts(const Resources& r) {
-    // Defensive: the panel might receive a callback before init finishes or after children were removed.
+    
     if (!_goldLabel || !_elixirLabel) return;
     int goldCap = ResourceManager::getGoldCap();
     int elixirCap = ResourceManager::getElixirCap();
     _goldRatio = (goldCap > 0) ? std::min(1.0f, std::max(0.0f, (float)r.gold / (float)goldCap)) : 0.0f;
     _elixirRatio = (elixirCap > 0) ? std::min(1.0f, std::max(0.0f, (float)r.elixir / (float)elixirCap)) : 0.0f;
 
-    // Show small "current/max" texts on the left of each progress bar.
+    
     _goldLabel->setString(cocos2d::StringUtils::format("%d/%d", r.gold, goldCap));
     _elixirLabel->setString(cocos2d::StringUtils::format("%d/%d", r.elixir, elixirCap));
-    // Population is not required by the current UI spec (only Gold/Elixir).
-    // Keep it empty and hidden to avoid compile dependency on a non-existent pop cap API.
+    
+    
     _popLabel->setString("");
 }
 
@@ -110,26 +112,26 @@ void ResourcePanel::layout() {
     const float barW = 170.0f * _scale;
     const float barH = 14.0f * _scale;
 
-    // Right aligned top-right panel: [text(current/max)]  [progress bar]
+    
     float rightX = origin.x + vs.width - margin;
     float topY = origin.y + vs.height - margin;
 
     auto placeRow = [&](cocos2d::Label* text, cocos2d::LayerColor* bg, cocos2d::LayerColor* fill, float ratio, float yTopRow) {
-        // Row height slightly larger than the bar height to give breathing space.
+        
         float rowH = barH + 8.0f * _scale;
         float y = yTopRow - rowH;
 
-        // Progress bar (right aligned)
+        
         bg->setAnchorPoint(cocos2d::Vec2(0.0f, 0.0f));
         bg->setContentSize(cocos2d::Size(barW, barH));
         bg->setPosition(cocos2d::Vec2(rightX - barW, y + (rowH - barH) * 0.5f));
 
-        // Fill
+        
         fill->setAnchorPoint(cocos2d::Vec2(0.0f, 0.0f));
         fill->setPosition(bg->getPosition());
         fill->setContentSize(cocos2d::Size(barW * std::min(1.0f, std::max(0.0f, ratio)), barH));
 
-        // Text at the left side of the bar
+        
         text->setScale(_scale);
         text->setAnchorPoint(cocos2d::Vec2(1.0f, 0.5f));
         text->setPosition(cocos2d::Vec2(bg->getPositionX() - gapX, y + rowH * 0.5f));
@@ -142,7 +144,7 @@ void ResourcePanel::layout() {
     y -= gapY;
     y = placeRow(_elixirLabel, _elixirBg, _fillElixirBg, _elixirRatio, y);
 
-    // Cheat buttons: place them below the resource bars, aligned with the bars.
+    
     if (_menu) {
         float cheatY = y - 14.0f * _scale;
         float leftX = rightX - barW;
@@ -162,8 +164,8 @@ void ResourcePanel::layout() {
         }
     }
 
-    // Population is not required to be a progress bar by the current spec.
-    // Keep it hidden to avoid clutter.
+    
+    
     _popBg->setVisible(false);
     _popLabel->setVisible(false);
     _timeBg->setVisible(false);

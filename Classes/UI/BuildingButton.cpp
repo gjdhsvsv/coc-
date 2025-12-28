@@ -1,3 +1,5 @@
+// File: BuildingButton.cpp
+// Brief: Implements the BuildingButton component.
 #include "UI/BuildingButton.h"
 using namespace cocos2d;
 

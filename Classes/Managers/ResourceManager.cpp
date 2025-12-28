@@ -1,3 +1,5 @@
+// File: ResourceManager.cpp
+// Brief: Implements the ResourceManager component.
 #include "Managers/ResourceManager.h"
 #include <algorithm>
 

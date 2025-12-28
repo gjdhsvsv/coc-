@@ -1,3 +1,5 @@
+// File: CustomButton.cpp
+// Brief: Implements the CustomButton component.
 #include "UI/CustomButton.h"
 
 using namespace cocos2d;
@@ -17,8 +19,8 @@ LayerColor* CustomButton::createUpgradePanel(
     auto vs = Director::getInstance()->getVisibleSize();
     auto origin = Director::getInstance()->getVisibleOrigin();
 
-    // Full-screen modal mask (fully transparent). It swallows touches so that
-    // the scene below will NEVER receive input until the modal is closed.
+    
+    
     auto mask = LayerColor::create(Color4B(0, 0, 0, 0), vs.width, vs.height);
     mask->setName(MODAL_MASK_NAME);
     mask->setIgnoreAnchorPointForPosition(false);
@@ -30,8 +32,8 @@ LayerColor* CustomButton::createUpgradePanel(
     maskListener->onTouchBegan = [](Touch*, Event*) { return true; };
     mask->getEventDispatcher()->addEventListenerWithSceneGraphPriority(maskListener, mask);
 
-    // On desktop, some interactions (e.g., dragging buildings) are driven by mouse events.
-    // Touch swallowing does NOT block EventListenerMouse, so we must stop mouse propagation here.
+    
+    
     auto mouseListener = EventListenerMouse::create();
     mouseListener->onMouseDown = [](Event* e) {
         if (auto* ev = dynamic_cast<EventMouse*>(e)) { ev->stopPropagation(); }
@@ -47,7 +49,7 @@ LayerColor* CustomButton::createUpgradePanel(
     };
     mask->getEventDispatcher()->addEventListenerWithSceneGraphPriority(mouseListener, mask);
 
-    // Inner white panel
+    
     auto panel = LayerColor::create(Color4B::WHITE, vs.width * 0.4f, vs.height * 0.3f);
     panel->setName(INNER_PANEL_NAME);
     panel->setIgnoreAnchorPointForPosition(false);
@@ -86,7 +88,7 @@ LayerColor* CustomButton::createUpgradePanel(
         return mask;
     }
 
-    // Normal upgrade panel
+    
     auto line1 = Label::createWithSystemFont(StringUtils::format("Required: %s", resName.c_str()), "Arial", 20);
     line1->setColor(Color3B::BLACK);
     line1->setPosition(Vec2(panel->getContentSize().width * 0.5f, panel->getContentSize().height - 70.f));

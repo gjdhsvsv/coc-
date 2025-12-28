@@ -1,24 +1,41 @@
+// File: MenuScene.h
+// Brief: Declares the MenuScene component.
 #pragma once
 #include "cocos2d.h"
 #include "ui/CocosGUI.h"
 
-// Main entry menu
-// - Create New Save: auto create first empty slot, then enter MainScene
-// - Load Existing Save: open a save selector overlay (Enter/Delete), and can close back to menu
+
+
+
+// MenuScene encapsulates related behavior and state.
+
+
+
+
 class MenuScene : public cocos2d::Scene
 {
 public:
+    // Creates an instance.
     static cocos2d::Scene* createScene();
+    // Initializes the object.
     virtual bool init() override;
     CREATE_FUNC(MenuScene);
+
+// Saves data to storage.
 
 private:
     void createNewSaveAndEnter();
 
-    // Save selector overlay
+    
+    // Saves data to storage.
+
+    
     void openSaveSelector();
+    // Saves data to storage.
     void closeSaveSelector();
+    // Saves data to storage.
     void buildSaveUI();
+    // Saves data to storage.
     void refreshSaveList();
 
 private:

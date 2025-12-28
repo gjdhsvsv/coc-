@@ -1,3 +1,5 @@
+// File: BattleScene.h
+// Brief: Declares the BattleScene component.
 #pragma once
 
 #include "cocos2d.h"
@@ -7,69 +9,126 @@
 #include "Systems/AISystem.h"
 #include "Data/SaveSystem.h"
 
+// BattleScene encapsulates related behavior and state.
+
 class BattleScene : public cocos2d::Scene
 {
 public:
+    // Creates an instance.
     static cocos2d::Scene* createScene();
+    // Initializes the object.
     virtual bool init() override;
+    // Updates the object state.
     virtual void update(float dt) override;
     CREATE_FUNC(BattleScene);
+
+// TODO: Add a brief description.
 
 private:
     void renderTargetVillage();
 
-    // ===== Battle countdown =====
-    // 45s scout phase -> 180s battle phase -> show return button.
+    
+    
     enum class Phase { Scout, Battle, End };
+    // Sets the upBattleHUD.
     void setupBattleHUD();
+    // Sets the upLootHUD.
     void setupLootHUD();
+    // Updates the object state.
     void updateLootHUD();
 
+    // Sets the upTroopBar.
+
     void setupTroopBar();
+    // TODO: Add a brief description.
     void refreshTroopBar();
 
-    // Troop selection & deployment
-    bool handleTroopBarClick(const cocos2d::Vec2& glPos);         // return true if click was consumed by troop bar
-    bool isPosInTroopBar(const cocos2d::Vec2& glPos) const;       // UI hit test without changing selection
+    
+    // TODO: Add a brief description.
+
+    
+    bool handleTroopBarClick(const cocos2d::Vec2& glPos);         
+    // Returns whether PosInTroopBar is true.
+    bool isPosInTroopBar(const cocos2d::Vec2& glPos) const;       
+    // Returns whether PosInDeployArea is true.
     bool isPosInDeployArea(const cocos2d::Vec2& worldLocal) const;
+    // TODO: Add a brief description.
     cocos2d::Vec2 worldToGridFloat(const cocos2d::Vec2& worldLocal) const;
+    // TODO: Add a brief description.
     bool worldToGrid(const cocos2d::Vec2& worldLocal, int& outR, int& outC) const;
+    // Returns whether GridBlocked is true.
     bool isGridBlocked(int r, int c) const;
+    // TODO: Add a brief description.
     void rebuildDeployBlockedMap();
+    // TODO: Add a brief description.
     void ensureDeployOverlay();
+    // TODO: Add a brief description.
     void rebuildDeployOverlay();
+    // Updates the object state.
     void updateDeployOverlayVisibility();
-    void setSelectedTroop(int troopType);                          // 1..4, -1 clear
-    void deploySelectedTroop(const cocos2d::Vec2& glPos);          // deploy 1 troop at world position
+    // Sets the SelectedTroop.
+    void setSelectedTroop(int troopType);                          
+    // TODO: Add a brief description.
+    void deploySelectedTroop(const cocos2d::Vec2& glPos);          
+    // TODO: Add a brief description.
     bool spawnUnit(int unitId, const cocos2d::Vec2& worldLocalPos);
 
+    // TODO: Add a brief description.
+
     void showBattleToast(const std::string& msg, float seconds = 2.0f);
+    // Sets the Zoom.
     void setZoom(float z);
+    // TODO: Add a brief description.
     void clampWorld();
+    // TODO: Add a brief description.
     void startPhase(Phase p, float durationSec);
+    // Updates the object state.
     void updateBattleHUD();
+    // TODO: Add a brief description.
     void showReturnButton();
 
-    // ===== Result / confirm popups =====
+    
+    // TODO: Add a brief description.
+
+    
     void showBattleResultPopup(bool win);
+    // TODO: Add a brief description.
     void openAbandonConfirmPopup();
+    // TODO: Add a brief description.
     void closeAbandonConfirmPopup(bool resumeBattle);
+    // TODO: Add a brief description.
     void endBattleAndShowResult(bool win);
 
-    // Battle result check
+    
+    // TODO: Add a brief description.
+
+    
     void checkBattleResult(bool timeUp);
 
-    // ===== Persist resources to both villages during battle =====
+    
+    // Loads data from storage.
+
+    
     void loadBattleSaves();
+    // Saves data to storage.
     void persistBattleSaves();
-    // Apply loot to BOTH villages only once, after battle result is determined.
-    // Attacker gain is clamped by the attacker's storage caps.
-    // Defender loss is directly deducted from its saved resources.
+    
+    
+    
+    // Sets the tleBattleLoot.
+    
+    
+    
     void settleBattleLoot();
+    // Saves data to storage.
     int calcGoldCapFromSave(const SaveData& data) const;
+    // Saves data to storage.
     int calcElixirCapFromSave(const SaveData& data) const;
+    // Returns whether TownHallDestroyed is true.
     bool isTownHallDestroyed() const;
+    // TODO: Add a brief description.
     bool areAllNonWallBuildingsDestroyed() const;
+    // TODO: Add a brief description.
     bool areAllTroopsDeployedAndDead() const;
 
     Phase _phase = Phase::Scout;
@@ -83,7 +142,7 @@ private:
     cocos2d::LayerColor* _barFill = nullptr;
     cocos2d::Menu* _returnMenu = nullptr;
 
-    // Loot UI (top-left): lootable resources and looted resources.
+    
     cocos2d::Node* _lootHud = nullptr;
     cocos2d::Label* _lootableTitle = nullptr;
     cocos2d::Label* _lootedTitle = nullptr;
@@ -106,29 +165,39 @@ private:
     int _lootedElixir = 0;
     bool _lootSettled = false;
 
+    // TODO: Add a brief description.
+
     cocos2d::Vec2 gridToWorld(int r, int c) const;
+    // Sets the BuildingVisualParams.
     void setBuildingVisualParams();
 
-    // ESC menu (settings / back / quit)
+    
+    // TODO: Add a brief description.
+
+    
     void openEscMenu();
+    // TODO: Add a brief description.
     void closeEscMenu();
+    // TODO: Add a brief description.
     void openSettings();
     cocos2d::LayerColor* _escMask = nullptr;
     cocos2d::LayerColor* _settingsMask = nullptr;
 
-    // New: ESC is used only for "abandon?" confirmation during battle.
+    
     cocos2d::LayerColor* _abandonMask = nullptr;
     cocos2d::LayerColor* _resultMask = nullptr;
     bool _pausedByPopup = false;
 
     cocos2d::Node* _world = nullptr;
 
-    // Zoom & pan for enemy village viewing
+    
     float _zoom = 1.0f;
     float _minZoom = 0.5f;
     float _maxZoom = 2.5f;
     bool _dragging = false;
     cocos2d::Vec2 _dragLast = cocos2d::Vec2::ZERO;
+
+    // TroopSlot encapsulates related behavior and state.
 
     struct TroopSlot {
         int type = -1;
@@ -137,12 +206,12 @@ private:
         cocos2d::Label* selectedLabel = nullptr;
     };
 
-    std::unordered_map<int, int> _troopCounts; // local battle session counts
+    std::unordered_map<int, int> _troopCounts; 
 
-    // Deployed troop counts (used as "losses" in the result popup).
+    
     std::unordered_map<int, int> _deployedCounts;
 
-    // Attacker troop levels (from Laboratory research).
+    
     std::unordered_map<int, int> _troopLevels;
     std::vector<TroopSlot> _troopSlots;
     int _selectedTroopType = -1;
@@ -150,19 +219,19 @@ private:
     long long _lastDeployMs = 0;
     bool _hasDeployedAnyTroop = false;
 
-    // Mouse click vs drag handling
+    
     bool _mouseDown = false;
     bool _mouseConsumed = false;
     bool _mouseMoved = false;
     cocos2d::Vec2 _mouseDownPos = cocos2d::Vec2::ZERO;
 
-    // Touch input (for laptops / touch screens). This coexists with mouse input.
+    
     bool _touchDown = false;
     bool _touchConsumed = false;
     bool _touchMoved = false;
     cocos2d::Vec2 _touchDownPos = cocos2d::Vec2::ZERO;
 
-    // Bottom troop bar (READY troops from MainScene)
+    
     cocos2d::Node* _troopBar = nullptr;
     cocos2d::Sprite* _background = nullptr;
     int _rows = 30;
@@ -171,7 +240,7 @@ private:
     float _tileH = 0.0f;
     cocos2d::Vec2 _anchor;
 
-    // Deployable diamond area in _world node space.
+    
     bool _deployAreaReady = false;
     cocos2d::Vec2 _deployTop = cocos2d::Vec2::ZERO;
     cocos2d::Vec2 _deployRight = cocos2d::Vec2::ZERO;
@@ -182,12 +251,12 @@ private:
     std::vector<float> _buildingScaleById;
     std::vector<cocos2d::Vec2> _buildingOffsetById;
 
-    // ===== Deployment blocking overlay =====
-    // Blocked cells are computed from enemy buildings' footprints and expanded by 1 tile.
-    std::vector<std::vector<uint8_t>> _deployBlocked; // rows x cols, 1 = blocked
-    cocos2d::DrawNode* _deployOverlay = nullptr;       // red overlay drawn in _world space
+    
+    
+    std::vector<std::vector<uint8_t>> _deployBlocked; 
+    cocos2d::DrawNode* _deployOverlay = nullptr;       
 
-    // ===== Battle runtime (AI / combat) =====
+    
     AISystem _ai;
     float _cellSizePx = 32.0f;
 
@@ -196,7 +265,7 @@ private:
 
     bool _battleEnded = false;
 
-    // Save persistence
+    
     int _attackerSlot = -1;
     int _defenderSlot = -1;
     SaveData _attackerData;

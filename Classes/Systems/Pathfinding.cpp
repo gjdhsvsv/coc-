@@ -1,3 +1,5 @@
+// File: Pathfinding.cpp
+// Brief: Implements the Pathfinding component.
 #include "Pathfinding.h"
 #include <algorithm>
 #include <cmath>
@@ -36,7 +38,7 @@ std::vector<Pathfinding::GridPos> Pathfinding::findPathAStar(int rows, int cols,
     const int N = rows * cols;
     if ((int)blocked.size() != N) return empty;
 
-    // start and goal must be passable
+    
     if (blocked[idxOf(start.r, start.c, cols)]) return empty;
     if (blocked[idxOf(goal.r, goal.c, cols)]) return empty;
 
@@ -77,7 +79,7 @@ std::vector<Pathfinding::GridPos> Pathfinding::findPathAStar(int rows, int cols,
 
         if (cr == goal.r && cc == goal.c)
         {
-            // reconstruct
+            
             std::vector<GridPos> path;
             int p = ci;
             while (p != -1)
@@ -102,7 +104,7 @@ std::vector<Pathfinding::GridPos> Pathfinding::findPathAStar(int rows, int cols,
             if (closed[ni]) continue;
             if (blocked[ni]) continue;
 
-            // cost: 1 for orthogonal, 1.414 for diagonal
+            
             float stepCost = 1.0f;
             if (allowDiag && k >= 4) stepCost = 1.41421356f;
 

@@ -1,3 +1,5 @@
+// File: UnitBase.h
+// Brief: Declares the UnitBase component.
 #pragma once
 
 #include "cocos2d.h"
@@ -5,73 +7,100 @@
 #include <memory>
 #include <string>
 
-// UnitBase
-// --------
-// A lightweight unit definition (stats + a few helpers).
-// We intentionally keep it similar to Building (plain class), so it can be
-// serialized easily later if you want to store troops in JSON.
-//
-// When you implement battle logic, you can:
-//  - create a Sprite by calling createSprite()
-//  - update attack cooldown with tickAttack(dt)
-//  - apply damage with takeDamage(...)
-//
-// NOTE: We do NOT start adding new files. Everything stays in existing files.
+
+
+
+
+
+
+
+
+
+
+
+
+// UnitBase encapsulates related behavior and state.
+
+
+
+
+
+
+
+
+
+
+
+
+
 class UnitBase {
 public:
     virtual ~UnitBase() = default;
 
-    // Basic identity
-    int unitId = 0;               // e.g. 1=Barbarian, 2=Archer
+    
+    int unitId = 0;               
     int level = 1;
     std::string name;
-    std::string image;            // sprite path in Resources (e.g. "Textures/Troops/barbarian.png")
+    std::string image;            
 
-    // Core stats
+    
     int hpMax = 1;
     int hp = 1;
     int damage = 1;
-    float attackInterval = 1.0f;  // seconds per hit
-    // NOTE: Design tables usually give range/speed in "tiles".
-    // We store those raw values too, then BattleScene converts them into pixels
-    // based on the current isometric tile size.
-    float attackRangeTiles = 0.4f;   // tiles
-    float moveSpeedStat = 18.0f;     // movement speed stat (tiles-based, CoC-style)
+    float attackInterval = 1.0f;  
+    
+    
+    
+    float attackRangeTiles = 0.4f;   
+    float moveSpeedStat = 18.0f;     
 
-    float attackRange = 20.0f;       // pixels (computed from attackRangeTiles)
-    float moveSpeed = 60.0f;         // pixels per second (computed from moveSpeedStat)
+    float attackRange = 20.0f;       
+    float moveSpeed = 60.0f;         
 
-    // Training-related stats
+    
     int housingSpace = 1;
     int costElixir = 0;
     int trainingTimeSec = 0;
 
-    // Runtime helpers (not serialized by default)
-    float attackCooldown = 0.0f;  // seconds
+    
+    float attackCooldown = 0.0f;  
+
+// Creates an instance.
 
 public:
-    // Create a sprite for rendering this unit.
-    // If image is missing, return a simple placeholder sprite with a label.
+    
+    
     virtual cocos2d::Sprite* createSprite() const;
 
-    // Reset runtime status (e.g. when reusing from a pool)
+    
+    // Resets state to defaults.
+
+    
     virtual void reset();
 
-    // Apply damage. Returns current hp after applying.
+    
+    // TODO: Add a brief description.
+
+    
     virtual int takeDamage(int amount);
 
     bool isDead() const { return hp <= 0; }
 
-    // Convenience
+    
     float getDPS() const { return attackInterval <= 0.0001f ? (float)damage : (float)damage / attackInterval; }
 
-    // Attack cooldown helpers
-    void tickAttack(float dt);     // reduce cooldown
+    
+    // TODO: Add a brief description.
+
+    
+    void tickAttack(float dt);     
     bool canAttack() const { return attackCooldown <= 0.0f; }
-    void startAttackCooldown();    // set cooldown to attackInterval
+    // TODO: Add a brief description.
+    void startAttackCooldown();    
 };
 
-// Optional factory helpers (kept in the same file for convenience)
+
 namespace UnitFactory {
+    // Creates an instance.
     std::unique_ptr<UnitBase> create(int unitId, int level);
 }
