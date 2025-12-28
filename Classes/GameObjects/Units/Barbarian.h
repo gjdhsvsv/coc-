@@ -1,16 +1,27 @@
+// File: Barbarian.h
+// Brief: Declares the Barbarian component.
 #pragma once
 
 #include "GameObjects/Units/UnitBase.h"
 
-// Barbarian
-// ---------
-// Melee troop. Simple stats only (no special ability yet).
-//
-// Suggested sprite path (change if your Resources name differs):
-//   Resources/Textures/Troops/barbarian.png
+
+
+
+
+
+
+// Barbarian encapsulates related behavior and state.
+
+
+
+
+
+
+
 class Barbarian : public UnitBase {
 public:
     Barbarian();
+    // TODO: Add a brief description.
     void applyLevel(int lvl);
     virtual ~Barbarian() = default;
 };

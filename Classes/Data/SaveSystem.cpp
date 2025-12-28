@@ -1,3 +1,5 @@
+// File: SaveSystem.cpp
+// Brief: Implements the SaveSystem component.
 #include "Data/SaveSystem.h"
 #include "cocos2d.h"
 #include "json/document.h"
@@ -98,7 +100,7 @@ bool SaveSystem::load(int slot, SaveData& outData)
         {
             outData.name = meta["name"].GetString();
         }
-        // Offline production timestamp
+        
         if (meta.HasMember("lastRealTime") && meta["lastRealTime"].IsInt64())
         {
             outData.lastRealTime = meta["lastRealTime"].GetInt64();
@@ -113,10 +115,10 @@ bool SaveSystem::load(int slot, SaveData& outData)
         if (res.HasMember("population") && res["population"].IsInt()) outData.population = res["population"].GetInt();
     }
 
-    // IMPORTANT:
-    // Time-scale is a *temporary cheat* only.
-    // Requirement: initial state must be NO acceleration; only enable after clicking the cheat button.
-    // Therefore we intentionally DO NOT load persisted timeScale from the save file.
+    
+    
+    
+    
     outData.timeScale = 1.0f;
 
     if (doc.HasMember("buildings") && doc["buildings"].IsArray())
@@ -135,7 +137,7 @@ bool SaveSystem::load(int slot, SaveData& outData)
             if (v.HasMember("hp") && v["hp"].IsInt()) b.hp = v["hp"].GetInt();
             if (v.HasMember("stored") && v["stored"].IsNumber()) b.stored = v["stored"].GetFloat();
 
-            // Build/upgrade fields (backward compatible: missing fields -> default values).
+            
             if (v.HasMember("buildState") && v["buildState"].IsInt()) b.buildState = v["buildState"].GetInt();
             if (v.HasMember("buildTotalSec") && v["buildTotalSec"].IsNumber()) b.buildTotalSec = v["buildTotalSec"].GetFloat();
             if (v.HasMember("buildRemainSec") && v["buildRemainSec"].IsNumber()) b.buildRemainSec = v["buildRemainSec"].GetFloat();
@@ -145,7 +147,7 @@ bool SaveSystem::load(int slot, SaveData& outData)
     }
 
     
-// Trained troops (stand units in village)
+
 if (doc.HasMember("trainedTroops") && doc["trainedTroops"].IsArray())
 {
     const auto& arr = doc["trainedTroops"];
@@ -163,9 +165,9 @@ if (doc.HasMember("trainedTroops") && doc["trainedTroops"].IsArray())
 }
 
 
-    // Troop levels (backward compatible).
+    
     outData.troopLevels.clear();
-    // Default: all troops are level 1.
+    
     for (int id = 1; id <= 4; ++id) outData.troopLevels[id] = 1;
 
     if (doc.HasMember("troopLevels") && doc["troopLevels"].IsArray())
@@ -183,7 +185,7 @@ if (doc.HasMember("trainedTroops") && doc["trainedTroops"].IsArray())
         }
     }
 
-    // Research state (backward compatible).
+    
     outData.researchUnitId = 0;
     outData.researchTargetLevel = 0;
     outData.researchTotalSec = 0.0f;
@@ -196,7 +198,7 @@ if (doc.HasMember("trainedTroops") && doc["trainedTroops"].IsArray())
         if (r.HasMember("totalSec") && r["totalSec"].IsNumber()) outData.researchTotalSec = r["totalSec"].GetFloat();
         if (r.HasMember("remainSec") && r["remainSec"].IsNumber()) outData.researchRemainSec = r["remainSec"].GetFloat();
 
-        // Clamp invalid values.
+        
         if (outData.researchRemainSec < 0.0f) outData.researchRemainSec = 0.0f;
         if (outData.researchTotalSec < 0.0f) outData.researchTotalSec = 0.0f;
         if (outData.researchRemainSec > outData.researchTotalSec && outData.researchTotalSec > 0.0f)
@@ -224,7 +226,7 @@ bool SaveSystem::save(const SaveData& data)
     rapidjson::Value meta(rapidjson::kObjectType);
     meta.AddMember("name", rapidjson::Value(data.name.c_str(), alloc), alloc);
     meta.AddMember("updatedAt", static_cast<int64_t>(std::time(nullptr)), alloc);
-    // Persist real-world timestamp for offline production.
+    
     meta.AddMember("lastRealTime", static_cast<int64_t>(std::time(nullptr)), alloc);
     doc.AddMember("meta", meta, alloc);
 
@@ -234,7 +236,7 @@ bool SaveSystem::save(const SaveData& data)
     res.AddMember("population", data.population, alloc);
     doc.AddMember("resources", res, alloc);
 
-    // Time-scale cheat is not persisted. Always save default 1.0 to overwrite any old saves.
+    
     doc.AddMember("timeScale", 1.0, alloc);
 
     rapidjson::Value arr(rapidjson::kArrayType);
@@ -256,7 +258,7 @@ bool SaveSystem::save(const SaveData& data)
     }
     doc.AddMember("buildings", arr, alloc);
 
-// Trained troops (stand units in village)
+
 rapidjson::Value tArr(rapidjson::kArrayType);
 for (const auto& t : data.trainedTroops)
 {
@@ -269,9 +271,9 @@ for (const auto& t : data.trainedTroops)
 doc.AddMember("trainedTroops", tArr, alloc);
 
 
-    // Troop levels
+    
     rapidjson::Value lvArr(rapidjson::kArrayType);
-    // Ensure default values exist (backward compatible callers).
+    
     std::unordered_map<int,int> levels = data.troopLevels;
     for (int id = 1; id <= 4; ++id) {
         if (levels.find(id) == levels.end()) levels[id] = 1;
@@ -285,7 +287,7 @@ doc.AddMember("trainedTroops", tArr, alloc);
     }
     doc.AddMember("troopLevels", lvArr, alloc);
 
-    // Research state
+    
     rapidjson::Value rObj(rapidjson::kObjectType);
     rObj.AddMember("unitId", data.researchUnitId, alloc);
     rObj.AddMember("targetLevel", data.researchTargetLevel, alloc);
@@ -326,9 +328,9 @@ SaveData SaveSystem::makeDefault(int slot, const std::string& name)
     th.stored = 0.0f;
     data.buildings.push_back(th);
     
-    // Default troop levels
+    
     for (int id = 1; id <= 4; ++id) data.troopLevels[id] = 1;
-    // No active research
+    
     data.researchUnitId = 0;
     data.researchTargetLevel = 0;
     data.researchTotalSec = 0.0f;

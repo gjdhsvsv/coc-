@@ -1,3 +1,5 @@
+// File: TroopBuilding.h
+// Brief: Declares the TroopBuilding component.
 #pragma once
 
 #include "GameObjects/Buildings/Building.h"
@@ -7,9 +9,15 @@
 #include "ui/CocosGUI.h"    
 #include <unordered_map>
 
-// Training Camp - level only determines which troop types can be trained
-// Capacity is controlled ONLY by Barracks (sum of all Barracks)
-// No training time or cost - clicking troop buttons adds directly to READY troops
+
+
+
+
+// Barracks encapsulates related behavior and state.
+
+
+
+
 
 class Barracks : public Building {
 public:
@@ -25,7 +33,7 @@ public:
         if (hp > hpMax) hp = hpMax;
     }
 
-    // Applies this Barracks' capacity delta to the global population cap.
+    
     void applyCap() {
         int currentCap = ResourceManager::getPopulationCap();
         int delta = capAdd - capApplied;
@@ -42,6 +50,8 @@ public:
         return st.capAdd;
     }
 };
+
+// TrainingCamp encapsulates related behavior and state.
 
 class TrainingCamp : public Building {
 public:
@@ -60,19 +70,19 @@ public:
         if (hp > hpMax) hp = hpMax;
     }
 
-    // Troop housing sizes
+    
     static int getTroopHousing(TroopType t) {
         switch (t) {
             case TROOP_BARBARIAN:   return 1;
             case TROOP_ARCHER:      return 1;
-            // Giant uses 5 housing.
+            
             case TROOP_GIANT:       return 5;
             case TROOP_WALLBREAKER: return 2;
             default:                return 1;
         }
     }
 
-    // UI icons
+    
     static const char* getTroopIcon(TroopType t) {
         switch (t) {
             case TROOP_BARBARIAN:   return "ui/barbarian_choose_button.png";
@@ -95,7 +105,7 @@ public:
 
     bool isUnlocked(TroopType t) const { return level >= getUnlockLevel(t); }
 
-    // READY troop management
+    
     int getReadyCount(TroopType t) const {
         auto it = readyTroops.find((int)t);
         return it == readyTroops.end() ? 0 : it->second;
@@ -110,7 +120,7 @@ public:
     const std::unordered_map<int, int>& getAllReadyCounts() const { return readyTroops; }
     void clearAllReadyCounts() { readyTroops.clear(); }
 
-    // Calculate used housing (READY troops only)
+    
     int getUsedHousing() const {
         int sum = 0;
         for (const auto& kv : readyTroops) {
@@ -119,25 +129,25 @@ public:
         return sum;
     }
 
-    // Try to add READY troop (direct add)
+    
     bool tryAddReadyTroop(TroopType t) {
         if (!isUnlocked(t)) return false;
 
-        // Get global capacity (from all Barracks)
+        
         int totalCap = ResourceManager::getPopulationCap();
         if (totalCap <= 0) return false;
 
-        // Calculate new used capacity
+        
         int newUsed = getUsedHousing() + getTroopHousing(t);
         if (newUsed > totalCap) return false;
 
-        // Add troop
+        
         int key = (int)t;
         readyTroops[key] = getReadyCount(t) + 1;
         return true;
     }
 
-    // Try to remove READY troop
+    
     bool tryRemoveReadyTroop(TroopType t) {
         int key = (int)t;
         auto it = readyTroops.find(key);
@@ -148,21 +158,25 @@ public:
         return true;
     }
 
-    // For compatibility with existing code
-    void updateTraining(float dt) {} // No training time needed
-    int getQueuedCount(TroopType t) const { return 0; } // No training queue
-    int getActiveType() const { return 0; } // No active training
-    float getActiveProgress01() const { return 0.0f; } // No progress bar
-    bool tryAddTroop(TroopType t) { return tryAddReadyTroop(t); } // Compatible
-    bool tryRemoveQueued(TroopType t) { return false; } // No queue
-    std::vector<int> getQueueOrder() const { return {}; } // No queue order
+    
+    void updateTraining(float dt) {} 
+    int getQueuedCount(TroopType t) const { return 0; } 
+    int getActiveType() const { return 0; } 
+    float getActiveProgress01() const { return 0.0f; } 
+    bool tryAddTroop(TroopType t) { return tryAddReadyTroop(t); } 
+    bool tryRemoveQueued(TroopType t) { return false; } 
+    std::vector<int> getQueueOrder() const { return {}; } 
 
 private:
-    std::unordered_map<int, int> readyTroops; // troop type -> ready count
+    std::unordered_map<int, int> readyTroops; 
 };
 
-// Laboratory - currently only provides upgradeable HP/build timing/cost like other buildings.
-// In future it can be used to unlock/upgrade troops.
+
+
+// Laboratory encapsulates related behavior and state.
+
+
+
 class Laboratory : public Building {
 public:
     Laboratory() { image = "buildings/building11L1.png"; }

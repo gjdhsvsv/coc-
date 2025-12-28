@@ -1,3 +1,5 @@
+// File: Soundmanager.cpp
+// Brief: Implements the Soundmanager component.
 #include "Managers/SoundManager.h"
 
 #include <algorithm>
@@ -21,7 +23,7 @@ void SoundManager::initFromUserDefault()
 {
     if (_inited) return;
     _inited = true;
-    // Persisted master volume (so setting it in LoginScene affects MainScene later).
+    
     _masterVolume = clamp01(UserDefault::getInstance()->getFloatForKey("master_volume", 1.0f));
 }
 
@@ -100,9 +102,9 @@ int SoundManager::playSfxRandom(const std::string& key, float volume)
 {
     initFromUserDefault();
 
-    // NOTE:
-    // This project stores sfx under "Resources/music" and uses many *variants*.
-    // We map logical keys -> a list of candidates and pick one randomly.
+    
+    
+    
     static const std::unordered_map<std::string, std::vector<std::string>> kSfxMap = {
         {"archer_death", {"music/archer_death_05.ogg", "music/archer_death_05v2.ogg"}},
         {"archer_tower_pick", {"music/archer_tower_pick_01.ogg"}},
@@ -134,11 +136,11 @@ int SoundManager::playSfxRandom(const std::string& key, float volume)
         {"wall_breaker_attack", {"music/wall_breaker_attack_01.ogg"}},
         {"wall_breaker_death", {"music/wall_breaker_die_01.ogg"}},
 
-        // Generic building pickup/place (used when a building has no dedicated sound).
+        
         {"building_pickup", {"music/build_pickup_05.ogg"}},
         {"building_place", {"music/builder_hut_place_02.ogg"}},
 
-        // Resource buildings pickup/place
+        
         {"goldmine_pick", {"music/goldmine_pickup4.ogg"}},
         {"goldmine_drop", {"music/goldmine_drop4.ogg"}},
         {"elixir_pump_pick", {"music/elixir_pump_pickup_07.ogg"}},
@@ -151,7 +153,7 @@ int SoundManager::playSfxRandom(const std::string& key, float volume)
     auto it = kSfxMap.find(key);
     if (it == kSfxMap.end() || it->second.empty())
     {
-        // Fallback: treat the key as a direct path.
+        
         return playSfx(key, volume);
     }
 

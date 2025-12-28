@@ -1,16 +1,27 @@
+// File: Archer.h
+// Brief: Declares the Archer component.
 #pragma once
 
 #include "GameObjects/Units/UnitBase.h"
 
-// Archer
-// ------
-// Ranged troop.
-//
-// Suggested sprite path (change if your Resources name differs):
-//   Resources/Textures/Troops/archer.png
+
+
+
+
+
+
+// Archer encapsulates related behavior and state.
+
+
+
+
+
+
+
 class Archer : public UnitBase {
 public:
     Archer();
+    // TODO: Add a brief description.
     void applyLevel(int lvl);
     virtual ~Archer() = default;
 };

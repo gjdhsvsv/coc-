@@ -1,32 +1,59 @@
+// File: SoundManager.h
+// Brief: Declares the SoundManager component.
 #pragma once
 #include "cocos2d.h"
 #include "audio/include/AudioEngine.h"
 
+// SoundManager encapsulates related behavior and state.
+
 class SoundManager {
 public:
-    // Play background music (single instance).
-    // `volume` is the track/base volume (0~1). Real output volume = base * master.
+    
+    
+    // Plays a sound effect.
+    
+    
     static void play(const std::string& path, bool loop = true, float volume = 1.0f);
+    // Stops playback.
     static void stop();
+    // TODO: Add a brief description.
     static void pause();
+    // TODO: Add a brief description.
     static void resume();
 
-    // Play sound effect (multiple instances allowed).
-    // `volume` is the sfx/base volume (0~1). Real output volume = base * master.
+    
+    
+    // Plays a sound effect.
+
+    
+    
     static int playSfx(const std::string& path, float volume = 1.0f);
 
-    // Play a "logical" sound effect key. If multiple candidates exist, pick one randomly.
-    // Example keys: "archer_death", "arrow_hit", "button_click".
+    
+    
+    // Plays a sound effect.
+
+    
+    
     static int playSfxRandom(const std::string& key, float volume = 1.0f);
 
-    // Master volume (0~1). Applies to both current and future audio.
+    
+    // Sets the Volume.
+
+    
     static void setVolume(float v);
+    // Returns the Volume.
     static float getVolume();
 
-    // Optional: base volume for current BGM (0~1).
+    
+    // Sets the BgmBaseVolume.
+
+    
     static void setBgmBaseVolume(float v);
+    // Returns the BgmBaseVolume.
     static float getBgmBaseVolume();
 private:
+    // Initializes the object.
     static void initFromUserDefault();
     static int _audioId;
     static float _masterVolume;

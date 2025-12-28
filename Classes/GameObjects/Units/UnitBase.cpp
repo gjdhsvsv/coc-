@@ -1,3 +1,5 @@
+// File: UnitBase.cpp
+// Brief: Implements the UnitBase component.
 #include "GameObjects/Units/UnitBase.h"
 
 #include "GameObjects/Units/Barbarian.h"
@@ -12,7 +14,7 @@ Sprite* UnitBase::createSprite() const
     auto s = Sprite::create(image);
     if (!s)
     {
-        // Placeholder: an empty sprite with a label.
+        
         auto node = Sprite::create();
         node->setTextureRect(Rect(0, 0, 64, 64));
         node->setColor(Color3B(200, 200, 200));
@@ -61,7 +63,7 @@ namespace UnitFactory {
         case 1: {
             auto u = std::make_unique<Barbarian>();
             u->applyLevel(level);
-            u->reset(); // ensure full hp + cooldown reset
+            u->reset(); 
             return u;
         }
         case 2: {
@@ -88,4 +90,4 @@ namespace UnitFactory {
         return nullptr;
     }
 
-} // namespace UnitFactory
+} 

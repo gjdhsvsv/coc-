@@ -1,3 +1,5 @@
+// File: ResourceBuilding.h
+// Brief: Declares the ResourceBuilding component.
 #pragma once
 #include "GameObjects/Buildings/Building.h"
 #include "Managers/ConfigManager.h"
@@ -5,6 +7,8 @@
 #include "cocos2d.h"
 #include <algorithm>
 #include <cmath>
+
+// ElixirCollector encapsulates related behavior and state.
 
 class ElixirCollector : public Building {
 public:
@@ -23,14 +27,14 @@ public:
         stored = std::min((float)capacity, stored + add);
     }
     bool canCollect() const {
-        // Only show/allow collect when we can deliver at least 1% of current total capacity.
-        // This prevents the "Collect" prompt from appearing too frequently.
+        
+        
         const int cap = ResourceManager::getElixirCap();
         const int cur = ResourceManager::getElixir();
         const int deliverMax = std::max(0, cap - cur);
         const int deliverable = std::min(deliverMax, (int)std::floor(stored));
 
-        // 1% threshold (ceil) so small caps still have a meaningful threshold.
+        
         const int threshold = std::max(1, (int)std::ceil((float)cap * 0.01f));
         return deliverable >= threshold;
     }
@@ -42,7 +46,7 @@ public:
         int deliver = std::min(deliverMax, (int)std::floor(stored));
         const int threshold = std::max(1, (int)std::ceil((float)cap * 0.01f));
 
-        // Enforce the 1% threshold.
+        
         if (!ignoreThreshold && deliver < threshold) return 0;
         if (deliver > 0) {
             ResourceManager::addElixir(deliver);
@@ -72,6 +76,7 @@ public:
         }
     }
 };
+// ElixirStorage encapsulates related behavior and state.
 class ElixirStorage : public Building {
 public:
     ElixirStorage() { image = "buildings/buildings4.png"; }
@@ -92,6 +97,7 @@ public:
         }
     }
 };
+// GoldMine encapsulates related behavior and state.
 class GoldMine : public Building {
 public:
     GoldMine() { image = "buildings/buildings5.png"; }
@@ -109,14 +115,14 @@ public:
         stored = std::min((float)capacity, stored + add);
     }
         bool canCollect() const {
-        // Only show/allow collect when we can deliver at least 1% of current total capacity.
-        // This prevents the "Collect" prompt from appearing too frequently.
+        
+        
         const int cap = ResourceManager::getGoldCap();
         const int cur = ResourceManager::getGold();
         const int deliverMax = std::max(0, cap - cur);
         const int deliverable = std::min(deliverMax, (int)std::floor(stored));
 
-        // 1% threshold (ceil) so small caps still have a meaningful threshold.
+        
         const int threshold = std::max(1, (int)std::ceil((float)cap * 0.01f));
         return deliverable >= threshold;
     }
@@ -127,7 +133,7 @@ public:
         int deliver = std::min(deliverMax, (int)std::floor(stored));
         const int threshold = std::max(1, (int)std::ceil((float)cap * 0.01f));
 
-        // Enforce the 1% threshold.
+        
         if (!ignoreThreshold && deliver < threshold) return 0;
         if (deliver > 0) {
             ResourceManager::addGold(deliver);
@@ -156,6 +162,7 @@ public:
         }
     }
 };
+// GoldStorage encapsulates related behavior and state.
 class GoldStorage : public Building {
 public:
     GoldStorage() { image = "buildings/buildings6.png"; }

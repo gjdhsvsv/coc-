@@ -1,3 +1,5 @@
+// File: AppDelegate.cpp
+// Brief: Implements the application delegate.
 #include "AppDelegate.h"
 #include "Scenes/MenuScene.h"
 #include "Scenes/MainScene.h"
@@ -11,29 +13,29 @@
 #endif
 using namespace cocos2d;
 
-// Add robust resource search paths for Win32 and classroom setups.
-// In some VS configurations, new assets may stay in the repo root Resources/
-// and not be copied to $(OutDir)/Resources. We proactively add a few common
-// locations so Sprite::create("ui/..."), Sprite::create("buildings/...") can
-// find newly added files (e.g. build_button11.png, building11L1.png).
+
+
+
+
+
 static void AddFallbackResourceSearchPaths() {
     auto fu = FileUtils::getInstance();
 
     std::vector<std::string> candidates;
-    // Typical runtime working directory is $(OutDir).
+    
     candidates.push_back("Resources");
     candidates.push_back("../Resources");
     candidates.push_back("../../Resources");
     candidates.push_back("../../../Resources");
     candidates.push_back("../../../../Resources");
 
-    // Some repos use lowercase.
+    
     candidates.push_back("resources");
     candidates.push_back("../resources");
     candidates.push_back("../../resources");
 
 #ifdef _WIN32
-    // Also add absolute candidates based on exe folder.
+    
     char modulePath[MAX_PATH] = {0};
     if (GetModuleFileNameA(NULL, modulePath, MAX_PATH) > 0) {
         std::string exePath = modulePath;
@@ -58,7 +60,7 @@ static void AddFallbackResourceSearchPaths() {
         fu->addSearchPath(p, true);
     }
 
-    // Helpful debug logs (Win32 console/output).
+    
     CCLOG("[SearchPath] ui/build_button11.png -> %s", fu->fullPathForFilename("ui/build_button11.png").c_str());
     CCLOG("[SearchPath] buildings/building11L1.png -> %s", fu->fullPathForFilename("buildings/building11L1.png").c_str());
 }
@@ -73,7 +75,7 @@ void AppDelegate::initGLContextAttrs() {
 }
 
 bool AppDelegate::applicationDidFinishLaunching() {
-    // Ensure newly added assets can be found regardless of VS working dir/copy steps.
+    
     AddFallbackResourceSearchPaths();
 
     auto director = Director::getInstance();

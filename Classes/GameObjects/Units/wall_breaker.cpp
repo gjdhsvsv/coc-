@@ -1,3 +1,5 @@
+// File: wall_breaker.cpp
+// Brief: Implements the wall_breaker component.
 #include "GameObjects/Units/wall_breaker.h"
 
 #include <algorithm>
@@ -14,10 +16,10 @@ WallBreaker::WallBreaker()
 
 void WallBreaker::applyLevel(int lvl)
 {
-    // Reference table (Lv1~5):
-    // Damage: 10,20,25,30,43
-    // Hitpoints: 20,24,29,35,53
-    // Damage when destroyed: 6,9,13,16,23
+    
+    
+    
+    
     static const int kHp[5] = { 20, 24, 29, 35, 53 };
     static const int kDmg[5] = { 10, 20, 25, 30, 43 };
     static const int kDeath[5] = { 6, 9, 13, 16, 23 };
@@ -30,7 +32,7 @@ void WallBreaker::applyLevel(int lvl)
     damage = kDmg[lvl - 1];
     deathDamage = kDeath[lvl - 1];
 
-    // From reference: attack speed 1s, range 1 tile, movement speed 24
+    
     attackInterval = 1.0f;
     attackRangeTiles = 1.0f;
     moveSpeedStat = 24.0f;

@@ -1,3 +1,5 @@
+// File: MainScene.cpp
+// Brief: Implements the MainScene component.
 #include "Scenes/MainScene.h"
 #include "Scenes/BattleScene.h"
 #include "Scenes/MenuScene.h"
@@ -32,19 +34,19 @@ static void playPickupSfxForBuildingId(int buildId)
 {
     switch (buildId)
     {
-    case 1: // Archer Tower
+    case 1: 
         SoundManager::playSfxRandom("archer_tower_pick", 1.0f);
         break;
-    case 2: // Cannon
+    case 2: 
         SoundManager::playSfxRandom("cannon_pick", 1.0f);
         break;
-    case 3: // Elixir Collector
+    case 3: 
         SoundManager::playSfxRandom("elixir_pump_pick", 1.0f);
         break;
-    case 4: // Elixir Storage
+    case 4: 
         SoundManager::playSfxRandom("elixir_storage_pick", 1.0f);
         break;
-    case 5: // Gold Mine
+    case 5: 
         SoundManager::playSfxRandom("goldmine_pick", 1.0f);
         break;
     default:
@@ -57,22 +59,22 @@ static void playPlaceSfxForBuildingId(int buildId)
 {
     switch (buildId)
     {
-    case 1: // Archer Tower
+    case 1: 
         SoundManager::playSfxRandom("archer_tower_place", 1.0f);
         break;
-    case 2: // Cannon
+    case 2: 
         SoundManager::playSfxRandom("cannon_drop", 1.0f);
         break;
-    case 3: // Elixir Collector
+    case 3: 
         SoundManager::playSfxRandom("elixir_pump_drop", 1.0f);
         break;
-    case 4: // Elixir Storage
+    case 4: 
         SoundManager::playSfxRandom("elixir_storage_drop", 1.0f);
         break;
-    case 5: // Gold Mine
+    case 5: 
         SoundManager::playSfxRandom("goldmine_drop", 1.0f);
         break;
-    case 6: // Gold Storage
+    case 6: 
         SoundManager::playSfxRandom("gold_storage_drop", 1.0f);
         break;
     default:
@@ -89,13 +91,13 @@ static void playPlaceSfxForBuildingId(int buildId)
 #include <cstdio>
 
 namespace {
-    // Create a cocos2d::Node safely. This avoids nullptr dereference crashes in rare cases
-    // (e.g., memory corruption or unexpected allocation failure).
+    
+    
     static cocos2d::Node* safeCreateNode() {
         auto n = cocos2d::Node::create();
         if (n) return n;
 
-        // Fallback path: manually allocate and init.
+        
         cocos2d::Node* raw = new (std::nothrow) cocos2d::Node();
         if (raw && raw->init()) {
             raw->autorelease();
@@ -109,10 +111,10 @@ namespace {
 #endif
 using namespace cocos2d;
 
-// Resolve resource in a way that respects cocos2d-x search paths.
-// IMPORTANT:
-// - Prefer passing canonical relative paths like "ui/xxx.png" or "buildings/xxx.png" to Sprite::create().
-// - Only fall back to prefixed paths when the canonical path cannot be resolved.
+
+
+
+
 static bool CanResolveResource(const std::string& relPath)
 {
     auto fu = FileUtils::getInstance();
@@ -122,10 +124,10 @@ static bool CanResolveResource(const std::string& relPath)
 
 static std::string FallbackResourcePath(const std::string& relPath)
 {
-    // DO NOT change the canonical path if it already resolves.
+    
     if (CanResolveResource(relPath)) return relPath;
 
-    // Try common prefixes for projects that keep "Resources" next to the executable.
+    
     const std::string tries[] = {
         std::string("Resources/") + relPath,
         std::string("resources/") + relPath,
@@ -177,11 +179,11 @@ bool MainScene::init()
     _world->addChild(_occupied, 2);
     _world->addChild(_hint, 2);
 
-    // Layer for stand troop visuals (spawned when troops are trained)
+    
     _standTroopLayer = Node::create();
     _world->addChild(_standTroopLayer, 4);
     _occupy.assign(_rows, std::vector<int>(_cols, 0));
-    // Indexed by building id. Reserve a bit more space for new building types.
+    
     _buildingScaleById.assign(12, 1.0f);
     _buildingOffsetById.assign(12, Vec2::ZERO);
 
@@ -234,29 +236,29 @@ bool MainScene::init()
                 float x = area.origin.x + c * (cw + gap);
                 float y = area.origin.y + area.size.height - (r + 1) * ch - r * gap;
 
-                // NOTE:
-                // - build_button9 is used for Wall (building id=10)
-                // - build_button11 is used for Laboratory (building id=11) and should appear at the bottom-right.
+                
+                
+                
                 int buttonIdx = idx;
-                if (idx == 10) buttonIdx = 11; // reserve the last slot for Laboratory
-                // Prefer canonical path first. Only add prefixes if the canonical path cannot be resolved.
+                if (idx == 10) buttonIdx = 11; 
+                
                 std::string rawPath = StringUtils::format("ui/build_button%d.png", buttonIdx);
                 std::string path = FallbackResourcePath(rawPath);
 
-                // Map shop slot index -> building id.
+                
                 const int buildId = (idx == 9 ? 10 : (idx == 10 ? 11 : idx));
 
 				MenuItem* item = nullptr;
 
-				// IMPORTANT:
-				// MenuItemImage::create(...) may return a non-null item even if the underlying
-				// sprites failed to load on some platforms/configurations, which makes the slot
-				// look "empty". To match how other buildings load UI reliably, we explicitly
-				// create Sprite nodes first and only build a menu item if the texture is valid.
+				
+				
+				
+				
+				
 				auto makeSprite = [](const std::string& p) -> Sprite* {
 					auto sp = Sprite::create(p);
 					if (!sp) return nullptr;
-					// A valid sprite must have a texture and a non-zero size.
+					
 					if (!sp->getTexture()) return nullptr;
 					Size s = sp->getContentSize();
 					if (s.width <= 0.0f || s.height <= 0.0f) return nullptr;
@@ -265,9 +267,9 @@ bool MainScene::init()
 
 				std::vector<std::string> candidates;
 				candidates.push_back(rawPath);
-				// "path" is already the best-effort resolved path from FallbackResourcePath().
+				
 				if (path != rawPath) candidates.push_back(path);
-				// Common extra prefixes just in case (do not rely on isFileExist()).
+				
 				candidates.push_back(std::string("Resources/") + rawPath);
 				candidates.push_back(std::string("../Resources/") + rawPath);
 
@@ -279,10 +281,10 @@ bool MainScene::init()
 				}
 
 				if (normalSp) {
-					// Selected sprite: use the same texture.
+					
 					auto selectedSp = makeSprite(picked);
 					if (!selectedSp) {
-						// As a fallback, reuse normal (must clone to avoid double-parent).
+						
 						selectedSp = Sprite::createWithTexture(normalSp->getTexture());
 						selectedSp->setTextureRect(Rect(0, 0, normalSp->getContentSize().width, normalSp->getContentSize().height));
 					}
@@ -297,7 +299,7 @@ bool MainScene::init()
 					item = spriteItem;
 				}
 				else {
-					// Fallback: show a text button if the image is missing.
+					
 					auto label = Label::createWithSystemFont(StringUtils::format("ID %d", buttonIdx), "Arial", 18);
 					label->setColor(Color3B::BLACK);
 					auto fallbackItem = MenuItemLabel::create(label, [this, buildId, panel](Ref*) {
@@ -308,7 +310,7 @@ bool MainScene::init()
 					item = fallbackItem;
 				}
 
-                // Disable if building count reaches its limit.
+                
                 const int limit = buildLimitForId(buildId);
 				if (countById(buildId) >= limit) {
                     item->setEnabled(false);
@@ -361,7 +363,7 @@ bool MainScene::init()
 
     auto listener = EventListenerKeyboard::create();
     listener->onKeyPressed = [this](EventKeyboard::KeyCode code, Event*) {
-        // ESC: close settings first, otherwise toggle in-game menu.
+        
         if (code == EventKeyboard::KeyCode::KEY_ESCAPE) {
             if (_settingsMask) {
                 _settingsMask->removeFromParent();
@@ -379,7 +381,7 @@ bool MainScene::init()
         };
     _eventDispatcher->addEventListenerWithSceneGraphPriority(listener, this);
 
-    //
+    
     setBuildingScale(0.33f);
 
     setBuildingScaleForId(1, 0.4f);
@@ -423,7 +425,7 @@ void MainScene::openEscMenu()
     _escMask = LayerColor::create(Color4B(0, 0, 0, 180));
     this->addChild(_escMask, 200);
 
-    // Swallow touches so the game below can't be clicked.
+    
     auto maskListener = EventListenerTouchOneByOne::create();
     maskListener->setSwallowTouches(true);
     maskListener->onTouchBegan = [](Touch*, Event*) { return true; };
@@ -436,7 +438,7 @@ void MainScene::openEscMenu()
         origin.y + visibleSize.height / 2 - panelH / 2);
     _escMask->addChild(panel);
 
-    // Allow touches to pass to panel children (buttons/scroll)
+    
 panel->setScale(0.1f);
     panel->runAction(EaseBackOut::create(ScaleTo::create(0.22f, 1.0f)));
 
@@ -451,7 +453,7 @@ panel->setScale(0.1f);
 
     auto backLabel = Label::createWithSystemFont("Back to Start", "Arial", 42);
     auto backItem = MenuItemLabel::create(backLabel, [this](Ref*) {
-        // Close menu before switching scenes.
+        
         closeEscMenu();
         Director::getInstance()->replaceScene(
             TransitionFade::create(0.35f, MenuScene::createScene())
@@ -500,7 +502,7 @@ void MainScene::openSettings()
     auto visibleSize = Director::getInstance()->getVisibleSize();
     auto origin = Director::getInstance()->getVisibleOrigin();
 
-    // 1) Mask layer (swallow touches)
+    
     _settingsMask = LayerColor::create(Color4B(0, 0, 0, 180));
     this->addChild(_settingsMask, 300);
 
@@ -509,7 +511,7 @@ void MainScene::openSettings()
     maskListener->onTouchBegan = [](Touch*, Event*) { return true; };
     _eventDispatcher->addEventListenerWithSceneGraphPriority(maskListener, _settingsMask);
 
-    // 2) Panel
+    
     const float panelW = 640.0f;
     const float panelH = 420.0f;
 
@@ -526,12 +528,12 @@ void MainScene::openSettings()
     panel->setScale(0.1f);
     panel->runAction(EaseBackOut::create(ScaleTo::create(0.22f, 1.0f)));
 
-    // 3) Title
+    
     auto title = Label::createWithSystemFont("Settings", "Arial", 50);
     title->setPosition(Vec2(panelW / 2, panelH - 50));
     panel->addChild(title);
 
-    // 4) Master volume slider (same as LoginScene)
+    
     auto volLabel = Label::createWithSystemFont("Master Volume", "Arial", 32);
     volLabel->setAnchorPoint(Vec2(0.0f, 0.5f));
     volLabel->setPosition(Vec2(60, 260));
@@ -547,7 +549,7 @@ void MainScene::openSettings()
     volSlider->setPercent((int)(curVol * 100.0f + 0.5f));
     panel->addChild(volSlider);
 
-    // 5) Mute checkbox
+    
     auto mute = ui::CheckBox::create(
         "ui/checkbox_off.png",
         "ui/checkbox_on.png"
@@ -585,7 +587,7 @@ void MainScene::openSettings()
         }
         });
 
-    // 6) Close button
+    
     auto closeLabel = Label::createWithSystemFont("X", "Arial", 40);
     auto closeItem = MenuItemLabel::create(closeLabel, [this](Ref*) {
         if (_settingsMask) {
@@ -710,7 +712,7 @@ void MainScene::showMainToast(const std::string& msg)
     label->setColor(Color3B(200, 30, 30));
     label->enableOutline(Color4B::BLACK, 2);
     label->setPosition(Vec2(origin.x + vs.width * 0.5f, origin.y + vs.height * 0.6f));
-    // Make sure toast is above ALL modal overlays (upgrade/train/attack/settings masks).
+    
     this->addChild(label, 5000);
 
     label->runAction(Sequence::create(
@@ -726,7 +728,7 @@ int MainScene::getActiveBuilderCount() const
     int count = 0;
     for (const auto& pb : _buildings) {
         if (!pb.data) continue;
-        // Walls are instant and do not consume builders.
+        
         if (pb.id == 10) continue;
         if (pb.data->buildState != Building::STATE_NORMAL && pb.data->buildTotalSec > 0.0f && pb.data->buildRemainSec > 0.0f) {
             count++;
@@ -748,22 +750,22 @@ void MainScene::attachBuildTimerUI(cocos2d::Sprite* sprite, float totalSec, floa
     auto ui = Node::create();
     ui->setTag(kBuildUiTag);
 
-    // Countdown text (bigger + black as requested)
+    
     auto label = Label::createWithSystemFont("00:00", "Arial", 26);
     label->setTag(kBuildUiLabelTag);
     label->setColor(Color3B::BLACK);
     label->enableOutline(Color4B::BLACK, 3);
     ui->addChild(label, 2);
 
-    // Progress bar (simple rectangles)
-    // NOTE: LayerColor ignores anchor point by default, so we avoid scaleX tricks.
-    // We resize the fill bar width directly to prevent any "extra" part leaking.
+    
+    
+    
     const float w = 72.0f;
     const float h = 8.0f;
     auto bg = LayerColor::create(Color4B(30, 30, 30, 200), w, h);
     bg->setTag(kBuildUiBgTag);
-    // NOTE: ignoreAnchorPointForPosition is deprecated in cocos2d-x 3.17.
-    // Use the setter to silence warnings.
+    
+    
     bg->setIgnoreAnchorPointForPosition(false);
     bg->setAnchorPoint(Vec2(0.5f, 0.5f));
     bg->setPosition(Vec2(0.f, -12.f));
@@ -776,7 +778,7 @@ void MainScene::attachBuildTimerUI(cocos2d::Sprite* sprite, float totalSec, floa
     fill->setPosition(Vec2(-w * 0.5f, -12.f));
     ui->addChild(fill, 1);
 
-    // Position above building sprite
+    
     ui->setPosition(Vec2(sprite->getContentSize().width * 0.5f, sprite->getContentSize().height + 20.f));
     sprite->addChild(ui, 200);
 
@@ -807,7 +809,7 @@ void MainScene::updateBuildTimerUI(cocos2d::Sprite* sprite, float totalSec, floa
         float h = bg->getContentSize().height;
         float clamped = std::max(0.0f, std::min(1.0f, ratio));
         fill->setContentSize(Size(w * clamped, h));
-        // Keep it left-aligned.
+        
         fill->setPosition(Vec2(-w * 0.5f, bg->getPositionY()));
     }
 }
@@ -826,12 +828,12 @@ void MainScene::updateBuildSystems(float dt)
     for (auto& pb : _buildings) {
         if (!pb.data || !pb.sprite) continue;
         if (pb.data->buildState == Building::STATE_NORMAL) {
-            // Ensure UI is removed.
+            
             removeBuildTimerUI(pb.sprite);
             continue;
         }
         if (pb.data->buildTotalSec <= 0.0f || pb.data->buildRemainSec <= 0.0f) {
-            // Edge case: invalid timer -> treat as finished.
+            
             pb.data->buildRemainSec = 0.0f;
         }
         else {
@@ -840,7 +842,7 @@ void MainScene::updateBuildSystems(float dt)
         }
 
         if (pb.data->buildRemainSec <= 0.0f) {
-            // Finish construction/upgrade
+            
             SoundManager::playSfxRandom("building_finished", 1.0f);
             if (pb.data->buildState == Building::STATE_UPGRADING && pb.data->upgradeTargetLevel > 0) {
                 pb.data->level = pb.data->upgradeTargetLevel;
@@ -851,11 +853,11 @@ void MainScene::updateBuildSystems(float dt)
             pb.data->buildRemainSec = 0.0f;
             pb.data->upgradeTargetLevel = 0;
 
-            // Apply new stats and capacity changes now.
+            
             BuildingFactory::applyStats(pb.data.get(), pb.id, pb.data->level, true, false);
 
-            // Recreate sprite so that leveled building images can refresh after upgrade/finish.
-            // (Some building types switch sprite by level.)
+            
+            
             if (pb.sprite) {
                 pb.sprite->removeFromParent();
                 pb.sprite = nullptr;
@@ -872,7 +874,7 @@ void MainScene::updateBuildSystems(float dt)
                 pb.sprite = s;
             }
 
-            // Sync level label.
+            
             if (pb.sprite) {
                 auto lvl = dynamic_cast<cocos2d::Label*>(pb.sprite->getChildByTag(20251225));
                 if (lvl) lvl->setString(cocos2d::StringUtils::format("level%d", pb.data->level));
@@ -884,7 +886,7 @@ void MainScene::updateBuildSystems(float dt)
             _saveDirty = true;
         }
         else {
-            // Still building
+            
             if (!pb.sprite->getChildByTag(kBuildUiTag)) {
                 attachBuildTimerUI(pb.sprite, pb.data->buildTotalSec, pb.data->buildRemainSec);
             }
@@ -894,7 +896,7 @@ void MainScene::updateBuildSystems(float dt)
     }
 
     if (anyFinished) {
-        // Clamp resources to caps after potential cap increases.
+        
         ResourceManager::setGold(ResourceManager::getGold());
         ResourceManager::setElixir(ResourceManager::getElixir());
         ResourceManager::setPopulation(ResourceManager::getPopulation());
@@ -903,19 +905,19 @@ void MainScene::updateBuildSystems(float dt)
 
 void MainScene::update(float dt)
 {
-    // Update build/upgrade timers (and apply stats when finished).
+    
     updateBuildSystems(dt);
 
-    // Update laboratory research timer (only one research at a time).
+    
     updateResearchSystems(dt);
 
     for (size_t i = 0; i < _buildings.size(); ++i) {
         auto& pb = _buildings[i];
         if (!pb.data) continue;
 
-        // Buildings under construction/upgrading are not functional.
+        
         if (!pb.data->isFunctional()) {
-            // Hide collect prompts if any.
+            
             if (auto ec = dynamic_cast<ElixirCollector*>(pb.data.get())) {
                 if (ec->promptLabel) {
                     ec->promptLabel->removeFromParent();
@@ -945,13 +947,13 @@ void MainScene::update(float dt)
         }
     }
 
-    // If training UI is open, refresh progress & content when state changes
-     //
+    
+     
     if (_trainMask && _trainCampIndex >= 0 && _trainCampIndex < (int)_buildings.size()) {
         auto& pb = _buildings[_trainCampIndex];
         if (pb.data) {
             if (auto tc = dynamic_cast<TrainingCamp*>(pb.data.get())) {
-                //
+                
                 int sig = 0;
                 const auto& ready = tc->getAllReadyCounts();
                 for (const auto& kv : ready) {
@@ -959,7 +961,7 @@ void MainScene::update(float dt)
                     sig = sig * 31 + kv.second;
                 }
 
-                //
+                
                 if (sig != _trainLastSig) {
                     _trainLastSig = sig;
                     refreshTrainingCampUI();
@@ -1004,8 +1006,8 @@ void MainScene::openUpgradeWindowForIndex(int idx)
     auto& b = _buildings[idx];
     if (!b.data) return;
 
-    // NOTE: The upgrade window should ALWAYS be openable (even if the building can't be upgraded now).
-    // We only show denial reasons when the player presses the "Upgrade" button.
+    
+    
 
     int curLv = b.data->level;
     bool isMax = (curLv >= ConfigManager::getMaxLevel());
@@ -1023,19 +1025,19 @@ void MainScene::openUpgradeWindowForIndex(int idx)
             auto& pb = _buildings[idx];
             if (!pb.data) return true;
 
-            // Re-check constraints and show the reason ONLY when "Upgrade" is pressed.
+            
             if (pb.data->level >= ConfigManager::getMaxLevel()) {
                 showMainToast("Already Max Level");
                 return false;
             }
 
-            // 1) Building itself is busy.
+            
             if (pb.data->buildState != Building::STATE_NORMAL && pb.data->buildRemainSec > 0.0f) {
                 showMainToast("Not enough builders.");
                 return false;
             }
 
-            // 2) Town Hall gating.
+            
             int th = getTownHallLevel();
             int maxBk2 = 0;
             for (const auto& it : _buildings) {
@@ -1048,13 +1050,13 @@ void MainScene::openUpgradeWindowForIndex(int idx)
                 return false;
             }
 
-            // 3) Builders limit (walls are instant and do not consume builders).
+            
             if (upgradeTime > 0 && getActiveBuilderCount() >= 2) {
                 showMainToast("Not enough builders.");
                 return false;
             }
 
-            // 4) Resource check.
+            
             if (cost.amount > 0) {
                 if (cost.useGold) {
                     if (ResourceManager::getGold() < cost.amount) {
@@ -1079,22 +1081,22 @@ void MainScene::openUpgradeWindowForIndex(int idx)
                 ok = true;
             }
             if (!ok) {
-                // Fallback (should not happen due to the pre-check above).
+                
                 showMainToast(cost.useGold ? "Not enough gold." : "Not enough elixir.");
                 return false;
             }
 
             SoundManager::playSfx("music/building_construct_07.ogg", 1.0f);
 
-            // Walls are instant upgrades (and any building with 0s build time).
+            
             if (upgradeTime <= 0) {
                 pb.data->level = nextLv;
 
-                // Apply new stats (also updates pb.data->image for leveled building sprites).
+                
                 BuildingFactory::applyStats(pb.data.get(), pb.id, pb.data->level, true, false);
 
-                // IMPORTANT: even for instant upgrades, we must recreate the sprite to refresh the texture.
-                // Otherwise, buildings like Elixir Collector will keep showing the old (level-1) image.
+                
+                
                 if (pb.sprite) {
                     pb.sprite->removeFromParent();
                     pb.sprite = nullptr;
@@ -1115,7 +1117,7 @@ void MainScene::openUpgradeWindowForIndex(int idx)
                 return true;
             }
 
-            // Start upgrade timer.
+            
             pb.data->buildState = Building::STATE_UPGRADING;
             pb.data->buildTotalSec = (float)upgradeTime;
             pb.data->buildRemainSec = (float)upgradeTime;
@@ -1129,9 +1131,9 @@ void MainScene::openUpgradeWindowForIndex(int idx)
         },
         []() {}
     );
-    // Add "Train" button for Training Camp (id == 8)
-    // IMPORTANT: upgrade panel is a FULL-SCREEN modal mask. The actual white panel
-    // is its child named "__inner_upgrade_panel". We must attach UI to that inner panel.
+    
+    
+    
     if (b.id == 8) {
         auto inner = modal ? modal->getChildByName("__inner_upgrade_panel") : nullptr;
         auto panel = dynamic_cast<cocos2d::LayerColor*>(inner);
@@ -1140,7 +1142,7 @@ void MainScene::openUpgradeWindowForIndex(int idx)
         trainLabel->setColor(Color3B::BLACK);
         auto trainItem = MenuItemLabel::create(trainLabel, [this, idx, modal](Ref*) {
             if (modal) modal->removeFromParent();
-            // Training camp is not usable while constructing/upgrading.
+            
             if (idx >= 0 && idx < (int)_buildings.size() && _buildings[idx].data) {
                 auto bd = _buildings[idx].data;
                 if (bd->buildState != Building::STATE_NORMAL && bd->buildRemainSec > 0.0f) {
@@ -1150,7 +1152,7 @@ void MainScene::openUpgradeWindowForIndex(int idx)
             }
             openTrainingCampPicker(idx);
         });
-        // place above the bottom buttons (relative to the inner panel)
+        
         float pw = panel ? panel->getContentSize().width : (modal ? modal->getContentSize().width : 0.0f);
         trainItem->setPosition(Vec2(pw * 0.5f, 80.f));
         auto trainMenu = Menu::create(trainItem, nullptr);
@@ -1159,7 +1161,7 @@ void MainScene::openUpgradeWindowForIndex(int idx)
         else if (modal) modal->addChild(trainMenu, 4);
     }
 
-    // Add "Research" button for Laboratory (id == 11)
+    
     if (b.id == 11) {
         auto inner = modal ? modal->getChildByName("__inner_upgrade_panel") : nullptr;
         auto panel = dynamic_cast<cocos2d::LayerColor*>(inner);
@@ -1169,7 +1171,7 @@ void MainScene::openUpgradeWindowForIndex(int idx)
         auto researchItem = MenuItemLabel::create(researchLabel, [this, idx, modal](Ref*) {
             if (modal) modal->removeFromParent();
 
-            // Laboratory is not usable while constructing/upgrading.
+            
             if (idx >= 0 && idx < (int)_buildings.size() && _buildings[idx].data) {
                 auto bd = _buildings[idx].data;
                 if (bd->buildState != Building::STATE_NORMAL && bd->buildRemainSec > 0.0f) {
@@ -1189,8 +1191,8 @@ void MainScene::openUpgradeWindowForIndex(int idx)
         else if (modal) modal->addChild(researchMenu, 4);
     }
 
-    // Keep the upgrade modal above ALL other UI layers (settings/esc/train/attack masks).
-    // This ensures ONLY "Upgrade" and "Cancel" are interactive.
+    
+    
     this->addChild(modal, 1000);
 }
 
@@ -1198,15 +1200,15 @@ void MainScene::openUpgradeWindowForIndex(int idx)
 
 void MainScene::setupInteraction()
 {
-    // Any modal overlay must block ALL interactions with the village below.
-    // This includes mouse-driven dragging/moving on desktop.
+    
+    
     auto isUIBlocked = [this]() -> bool {
         if (_escMask && _escMask->isVisible()) return true;
         if (_settingsMask && _settingsMask->isVisible()) return true;
         if (_attackMask && _attackMask->isVisible()) return true;
         if (_trainMask && _trainMask->isVisible()) return true;
         if (_researchMask && _researchMask->isVisible()) return true;
-        // Upgrade window uses a full-screen modal mask.
+        
         if (this->getChildByName("__modal_mask__")) return true;
         return false;
     };
@@ -1215,7 +1217,7 @@ void MainScene::setupInteraction()
     mouse->onMouseScroll = [this, isUIBlocked](Event* e) {
         auto ev = static_cast<EventMouse*>(e);
         if (isUIBlocked()) return;
-        // When a modal overlay (attack target picker) is open, let the overlay handle mouse wheel.
+        
         if (_attackMask && _attackMask->isVisible()) return;
 float delta = ev->getScrollY();
         float k = 1.1f;
@@ -1228,8 +1230,8 @@ float delta = ev->getScrollY();
         if (ev->getMouseButton() == EventMouse::MouseButton::BUTTON_LEFT) {
             Vec2 cur(ev->getCursorX(), ev->getCursorY());
 
-            // If the player clicks on a "Collect" prompt label, collect directly.
-            // This matches the expected UX: clicking the text should collect.
+            
+            
             if (!_placing && !_moving && _world) {
                 Vec2 local = _world->convertToNodeSpace(cur);
                 for (size_t i = 0; i < _buildings.size(); ++i) {
@@ -1240,7 +1242,7 @@ float delta = ev->getScrollY();
                     if (auto ec = dynamic_cast<ElixirCollector*>(pb.data.get())) {
                         if (ec->promptLabel) {
                             cocos2d::Rect r = ec->promptLabel->getBoundingBox();
-                            // Add a small padding to make it easier to click.
+                            
                             r.origin -= Vec2(6.f, 4.f);
                             r.size.width += 12.f;
                             r.size.height += 8.f;
@@ -1308,8 +1310,8 @@ float delta = ev->getScrollY();
                                     if (!it.data) continue;
                                     if (!it.data->isFunctional()) continue;
                                     if (auto ec2 = dynamic_cast<ElixirCollector*>(it.data.get())) {
-                                        // Collect from all Elixir Collectors of the same type in one click.
-                                        // Ignore the 1% threshold here because the user explicitly initiated a collect action.
+                                        
+                                        
                                         totalDeliver += ec2->collect(true);
                                     }
                                 }
@@ -1495,7 +1497,7 @@ void MainScene::placeBuilding(int r, int c, int id)
         return;
     }
 
-    // Town Hall requirement gating (level 1 of this building).
+    
     {
         int th = getTownHallLevel();
         int maxBk = 0;
@@ -1508,7 +1510,7 @@ void MainScene::placeBuilding(int r, int c, int id)
         }
     }
 
-    // Builder limit (only for timed constructions; walls are instant).
+    
     int buildTime = ConfigManager::getBuildTimeSec(id, 1);
     if (buildTime > 0 && getActiveBuilderCount() >= 2) {
         showMainToast("Not enough builders.");
@@ -1516,7 +1518,7 @@ void MainScene::placeBuilding(int r, int c, int id)
     }
 
     auto buildCost = ConfigManager::getBuildCost(id);
-    // Check resource affordability before spending.
+    
     if (buildCost.amount > 0) {
         if (buildCost.useGold) {
             if (ResourceManager::getGold() < buildCost.amount) {
@@ -1543,7 +1545,7 @@ void MainScene::placeBuilding(int r, int c, int id)
                 drawCellFilled(r + dr, c + dc, Color4F(0.2f, 0.8f, 0.2f, 0.6f), _occupied);
     }
 
-    // If the building has a timer, it should NOT apply capacity bonuses until construction ends.
+    
     bool applyCapsNow = (buildTime <= 0);
     auto b = BuildingFactory::create(id, 1, applyCapsNow, true);
     auto s = b->createSprite();
@@ -1554,7 +1556,7 @@ void MainScene::placeBuilding(int r, int c, int id)
     s->setScale(_buildingScale * _buildingScaleById[idx]);
     _world->addChild(s, 3);
 
-    // Initialize build state.
+    
     if (buildTime > 0) {
         b->buildState = Building::STATE_CONSTRUCTING;
         b->buildTotalSec = (float)buildTime;
@@ -1569,12 +1571,12 @@ void MainScene::placeBuilding(int r, int c, int id)
         b->upgradeTargetLevel = 0;
     }
 
-    // Spend after all checks succeed.
+    
     if (buildCost.amount > 0) {
         bool ok = buildCost.useGold ? ResourceManager::spendGold(buildCost.amount)
             : ResourceManager::spendElixir(buildCost.amount);
         if (!ok) {
-            // Should not happen due to pre-check, but keep safe.
+            
             if (s) s->removeFromParent();
             return;
         }
@@ -1583,7 +1585,7 @@ void MainScene::placeBuilding(int r, int c, int id)
     std::shared_ptr<Building> ptr(b.release());
     _buildings.push_back({ id, r, c, s, ptr });
 
-    // SFX: place new building.
+    
     playPlaceSfxForBuildingId(id);
 
     _saveDirty = true;
@@ -1691,7 +1693,7 @@ void MainScene::commitMove(int r, int c)
     b.r = r; b.c = c;
     redrawOccupied();
 
-    // SFX: place after dragging.
+    
     playPlaceSfxForBuildingId(b.id);
 
     _saveDirty = true;
@@ -1730,22 +1732,22 @@ void MainScene::loadFromCurrentSaveOrCreate()
     if (_occupied) _occupied->clear();
 
     ResourceManager::reset();
-    // Offline progress:
-    // 1) Advance construction/upgrade timers.
-    // 2) Add stored resources for producers if they were functional.
-    // NOTE: We do not try to split elapsed time into "before/after finish" segments. This is a lightweight simulation.
+    
+    
+    
+    
     {
         const int64_t now = static_cast<int64_t>(std::time(nullptr));
         const int64_t last = data.lastRealTime;
 	        if (last > 0 && now > last) {
-	            const double elapsed = static_cast<double>(now - last); // seconds
+	            const double elapsed = static_cast<double>(now - last); 
 
-            // Advance build timers first.
+            
             for (auto& b : data.buildings) {
                 if (b.buildState != Building::STATE_NORMAL && b.buildTotalSec > 0.0f && b.buildRemainSec > 0.0f) {
                     b.buildRemainSec = std::max(0.0f, b.buildRemainSec - (float)elapsed);
                     if (b.buildRemainSec <= 0.0f) {
-                        // Completed while offline.
+                        
                         if (b.buildState == Building::STATE_UPGRADING && b.upgradeTargetLevel > 0) {
                             b.level = b.upgradeTargetLevel;
                         }
@@ -1757,7 +1759,7 @@ void MainScene::loadFromCurrentSaveOrCreate()
                 }
             }
 
-	            // Offline production only for functional producers.
+	            
             for (auto& b : data.buildings) {
                 if (b.buildState != Building::STATE_NORMAL) continue;
                 if (b.id == 3) {
@@ -1772,11 +1774,11 @@ void MainScene::loadFromCurrentSaveOrCreate()
                 }
 	            }
 
-	            // Offline research progress
+	            
 	            if (data.researchUnitId > 0 && data.researchRemainSec > 0.0f && data.researchTotalSec > 0.0f) {
 	                data.researchRemainSec = std::max(0.0f, data.researchRemainSec - (float)elapsed);
 	                if (data.researchRemainSec <= 0.0f) {
-	                    // Research completed while offline
+	                    
 	                    int cur = 1;
 	                    auto it = data.troopLevels.find(data.researchUnitId);
 	                    if (it != data.troopLevels.end()) cur = it->second;
@@ -1791,11 +1793,11 @@ void MainScene::loadFromCurrentSaveOrCreate()
 	        }
 
 	        data.lastRealTime = now;
-	        _saveDirty = true; // ensure lastRealTime is saved back
+	        _saveDirty = true; 
     }
 
-    // Time-scale is a temporary cheat.
-    // Requirement: initial state must be NO acceleration until the cheat button is used.
+    
+    
     _timeScale = 1.0f;
 
     for (const auto& b : data.buildings)
@@ -1822,7 +1824,7 @@ void MainScene::loadFromCurrentSaveOrCreate()
     ResourceManager::setElixir(data.elixir);
     ResourceManager::setPopulation(data.population);
 
-    // Load troop levels and active research state.
+    
     _troopLevels = data.troopLevels;
     for (int id = 1; id <= 4; ++id) {
         if (_troopLevels.find(id) == _troopLevels.end()) _troopLevels[id] = 1;
@@ -1860,11 +1862,11 @@ void MainScene::saveToCurrentSlot(bool force)
     data.gold = ResourceManager::getGold();
     data.elixir = ResourceManager::getElixir();
     data.population = ResourceManager::getPopulation();
-    // Do not persist the time-scale cheat.
+    
     data.timeScale = 1.0f;
     data.lastRealTime = static_cast<int64_t>(std::time(nullptr));
 
-    // Persist troop levels and research state
+    
     data.troopLevels = _troopLevels;
     data.researchUnitId = _activeResearchUnitId;
     data.researchTargetLevel = _activeResearchTargetLevel;
@@ -1895,7 +1897,7 @@ for (const auto& t : _standTroops)
             sb.hp = b.data->hp;
             sb.stored = b.data->stored;
 
-            // Persist build/upgrade state.
+            
             sb.buildState = b.data->buildState;
             sb.buildTotalSec = b.data->buildTotalSec;
             sb.buildRemainSec = b.data->buildRemainSec;
@@ -1935,9 +1937,9 @@ void MainScene::placeBuildingLoaded(int r, int c, const SaveBuilding& info)
                 drawCellFilled(r + dr, c + dc, Color4F(0.2f, 0.8f, 0.2f, 0.6f), _occupied);
     }
 
-    // When loading:
-    // - Constructing buildings should NOT apply capacity bonuses until finished.
-    // - Upgrading buildings SHOULD apply current (old) capacity bonuses.
+    
+    
+    
     bool hasTimer = (info.buildState != 0 && info.buildTotalSec > 0.0f && info.buildRemainSec > 0.0f);
     bool applyCapsNow = true;
     if (hasTimer && info.buildState == Building::STATE_CONSTRUCTING) {
@@ -1950,7 +1952,7 @@ void MainScene::placeBuildingLoaded(int r, int c, const SaveBuilding& info)
     if (info.hp > 0) b->hp = std::min(info.hp, b->hpMax);
     b->stored = info.stored;
 
-    // Restore build state.
+    
     b->buildState = info.buildState;
     b->buildTotalSec = info.buildTotalSec;
     b->buildRemainSec = info.buildRemainSec;
@@ -1978,7 +1980,7 @@ void MainScene::openAttackTargetPicker()
     auto visibleSize = Director::getInstance()->getVisibleSize();
     auto origin = Director::getInstance()->getVisibleOrigin();
 
-    // Modal mask (swallow touches)
+    
     _attackMask = LayerColor::create(Color4B(0, 0, 0, 180));
     this->addChild(_attackMask, 250);
 
@@ -2003,7 +2005,7 @@ void MainScene::openAttackTargetPicker()
     title->setPosition(Vec2(panelW / 2, panelH - 50));
     panel->addChild(title);
 
-    // Close button (X)
+    
     auto closeLabel = Label::createWithSystemFont("X", "Arial", 44);
     closeLabel->setColor(Color3B::WHITE);
     auto closeItem = MenuItemLabel::create(closeLabel, [this](Ref*) {
@@ -2014,7 +2016,7 @@ void MainScene::openAttackTargetPicker()
     closeMenu->setPosition(Vec2::ZERO);
     panel->addChild(closeMenu, 2);
 
-    // Collect targets: all existing slots except current
+    
     auto metasAll = SaveSystem::listAllSlots();
     std::vector<SaveMeta> targets;
     targets.reserve(metasAll.size());
@@ -2024,13 +2026,13 @@ void MainScene::openAttackTargetPicker()
             targets.push_back(m);
     }
 
-    // ScrollView
+    
     _attackScroll = ui::ScrollView::create();
     _attackScroll->setDirection(ui::ScrollView::Direction::VERTICAL);
     _attackScroll->setBounceEnabled(true);
     _attackScroll->setContentSize(Size(panelW - 40, panelH - 140));
-    //
-    //
+    
+    
     _attackScroll->setAnchorPoint(Vec2::ZERO);
     _attackScroll->setIgnoreAnchorPointForPosition(true);
     _attackScroll->setPosition(Vec2(20, 60));
@@ -2080,7 +2082,7 @@ void MainScene::openAttackTargetPicker()
             auto attackLabel = Label::createWithSystemFont("Attack", "Arial", 26);
             auto attackItem = MenuItemLabel::create(attackLabel, [this, meta](Ref*) {
                 SaveSystem::setBattleTargetSlot(meta.slot);
-                // Pass current READY troops to BattleScene for the bottom troop bar UI.
+                
                 SaveSystem::setBattleReadyTroops(collectAllReadyTroops());
                 SaveSystem::setBattleTroopLevels(_troopLevels);
                 closeAttackTargetPicker();
@@ -2094,7 +2096,7 @@ void MainScene::openAttackTargetPicker()
         }
     }
 
-    // Mouse wheel support (Win32)
+    
     if (!_attackMouseListener)
     {
         _attackMouseListener = EventListenerMouse::create();
@@ -2143,9 +2145,9 @@ _attackMask->removeFromParent();
 }
 
 
-// =========================
-// Training Camp UI (Army Camp)
-// =========================
+
+
+
 void MainScene::openTrainingCampPicker(int buildingIndex)
 {
     SoundManager::playSfxRandom("button_click", 1.0f);
@@ -2163,7 +2165,7 @@ void MainScene::openTrainingCampPicker(int buildingIndex)
     auto visibleSize = Director::getInstance()->getVisibleSize();
     auto origin = Director::getInstance()->getVisibleOrigin();
 
-    // Modal mask
+    
     _trainMask = LayerColor::create(Color4B(0, 0, 0, 180));
     this->addChild(_trainMask, 260);
 
@@ -2172,7 +2174,7 @@ void MainScene::openTrainingCampPicker(int buildingIndex)
     maskListener->onTouchBegan = [](Touch*, Event*) { return true; };
     _eventDispatcher->addEventListenerWithSceneGraphPriority(maskListener, _trainMask);
 
-    // Panel
+    
     float panelW = visibleSize.width * 0.90f;
     float panelH = visibleSize.height * 0.85f;
     auto panel = LayerColor::create(Color4B(245, 245, 245, 255), panelW, panelH);
@@ -2180,13 +2182,13 @@ void MainScene::openTrainingCampPicker(int buildingIndex)
     _trainMask->addChild(panel, 1);
     _trainPanel = panel;
 
-    // Title
+    
     auto title = Label::createWithSystemFont("Training", "Arial", 26);
     title->setColor(Color3B::BLACK);
     title->setPosition(Vec2(panelW * 0.5f, panelH - 30.f));
     panel->addChild(title, 2);
 
-    // Close button
+    
     auto closeLbl = Label::createWithSystemFont("X", "Arial", 26);
     closeLbl->setColor(Color3B::BLACK);
     auto closeItem = MenuItemLabel::create(closeLbl, [this](Ref*) {
@@ -2198,14 +2200,14 @@ void MainScene::openTrainingCampPicker(int buildingIndex)
     closeMenu->setPosition(Vec2::ZERO);
     panel->addChild(closeMenu, 3);
 
-    //
+    
     _trainCapLabel = Label::createWithSystemFont("", "Arial", 18);
     _trainCapLabel->setColor(Color3B::BLACK);
     _trainCapLabel->setAnchorPoint(Vec2(1, 0.5));
     _trainCapLabel->setPosition(Vec2(panelW - 20.f, panelH - 70.f));
     panel->addChild(_trainCapLabel, 2);
 
-    //
+    
     auto rTitle = Label::createWithSystemFont("Ready", "Arial", 18);
     rTitle->setColor(Color3B::BLACK);
     rTitle->setAnchorPoint(Vec2(0, 0.5));
@@ -2218,7 +2220,7 @@ void MainScene::openTrainingCampPicker(int buildingIndex)
         auto probe = Sprite::create(TrainingCamp::getTroopIcon(TrainingCamp::TROOP_BARBARIAN));
         if (probe) readyIconH = probe->getContentSize().height;
     }
-//
+
     _trainReadyRow = safeCreateNode();
 
     if (_trainReadyRow) {
@@ -2229,7 +2231,7 @@ void MainScene::openTrainingCampPicker(int buildingIndex)
     }
 
 
-    //
+    
     _trainSelectRow = safeCreateNode();
     if (_trainSelectRow) {
         _trainSelectRow->setPosition(Vec2(20.f, 25.f));
@@ -2284,15 +2286,15 @@ void MainScene::refreshTrainingCampUI()
     auto tc = dynamic_cast<TrainingCamp*>(pb.data.get());
     if (!tc) return;
 
-    // Clear existing content
+    
     if (_trainReadyRow) _trainReadyRow->removeAllChildren();
     if (_trainSelectRow) _trainSelectRow->removeAllChildren();
 
-    // Normalize icon sizes so that the Wall Breaker button does not become huge and block clicks.
+    
     const float kTrainIconSide = 90.0f;
     const float kTrainIconGap = 10.0f;
 
-	// Helper to create icon node with count + minus button
+	
 	auto createReadyIcon = [this, kTrainIconSide](TrainingCamp::TroopType t, int count)->Node* {
         auto node = safeCreateNode();
         if (!node) return nullptr;
@@ -2315,7 +2317,7 @@ void MainScene::refreshTrainingCampUI()
 
         Size iconSize = sp->getContentSize() * scale;
 
-        // Count label (top-left inside)
+        
         char buf[32];
         snprintf(buf, sizeof(buf), "x%d", count);
         auto cntLbl = Label::createWithSystemFont(buf, "Arial", 18);
@@ -2325,17 +2327,17 @@ void MainScene::refreshTrainingCampUI()
         node->addChild(cntLbl, 2);
 
         
-// Troop level label (center).
+
 {
     int lv = getTroopLevel((int)t);
     auto lvLbl = Label::createWithSystemFont(StringUtils::format("LV%d", lv), "Arial", 28);
     lvLbl->setColor(Color3B::BLACK);
-    // Use outline to make the text thicker while keeping a black fill.
+    
     lvLbl->enableOutline(Color4B::BLACK, 3);
     lvLbl->setAnchorPoint(Vec2(0.5f, 0.5f));
     lvLbl->setPosition(Vec2(iconSize.width * 0.5f, iconSize.height * 0.5f));
 
-    // Keep the label inside the icon.
+    
     float maxW = iconSize.width * 0.95f;
     float maxH = iconSize.height * 0.60f;
     float bw = lvLbl->getContentSize().width;
@@ -2347,7 +2349,7 @@ void MainScene::refreshTrainingCampUI()
 
     node->addChild(lvLbl, 2);
 }
-        // Minus button (top-right inside)
+        
         auto minusLbl = Label::createWithSystemFont("-", "Arial", 22);
         minusLbl->setColor(Color3B(40, 40, 40));
         auto minusItem = MenuItemLabel::create(minusLbl, [this, t](Ref*) {
@@ -2358,7 +2360,7 @@ void MainScene::refreshTrainingCampUI()
             auto tc2 = dynamic_cast<TrainingCamp*>(pb2.data.get());
             if (!tc2) return;
 
-            // Try to remove ready troop
+            
             if (tc2->tryRemoveReadyTroop(t)) {
                 _trainLastSig = 0;
                 removeStandTroopOfType((int)t);
@@ -2376,11 +2378,11 @@ void MainScene::refreshTrainingCampUI()
         return node;
         };
 
-    // Show ready troops
+    
     float x = 0.f;
     float gap = 10.f;
     if (_trainReadyRow) {
-        // Loop through all troop types
+        
         for (int key = 1; key <= 4; ++key) {
             auto t = (TrainingCamp::TroopType)key;
             int cnt = tc->getReadyCount(t);
@@ -2394,7 +2396,7 @@ void MainScene::refreshTrainingCampUI()
         }
     }
 
-    // Show trainable troop buttons (unlocked by camp level)
+    
     if (_trainSelectRow) {
         float bx = 0.f;
         for (int key = 1; key <= 4; ++key) {
@@ -2412,17 +2414,17 @@ void MainScene::refreshTrainingCampUI()
         }
 
             
-// Troop level label (center).
+
 {
     int lv = getTroopLevel((int)t);
     auto lvLbl = Label::createWithSystemFont(StringUtils::format("LV%d", lv), "Arial", 28);
     lvLbl->setColor(Color3B::BLACK);
-    // Use outline to make the text thicker while keeping a black fill.
+    
     lvLbl->enableOutline(Color4B::BLACK, 3);
     lvLbl->setAnchorPoint(Vec2(0.5f, 0.5f));
     lvLbl->setPosition(Vec2(btn->getContentSize().width * 0.5f, btn->getContentSize().height * 0.5f));
 
-    // Keep the label inside the icon.
+    
     float maxW = btn->getContentSize().width * 0.95f;
     float maxH = btn->getContentSize().height * 0.60f;
     float bw = lvLbl->getContentSize().width;
@@ -2442,7 +2444,7 @@ void MainScene::refreshTrainingCampUI()
                 auto tc2 = dynamic_cast<TrainingCamp*>(pb2.data.get());
                 if (!tc2) return;
 
-                // Try to add ready troop
+                
                 if (tc2->tryAddReadyTroop(t)) {
                     _trainLastSig = 0;
                     spawnStandTroop((int)t);
@@ -2460,7 +2462,7 @@ void MainScene::refreshTrainingCampUI()
         }
     }
 
-    // Update capacity label
+    
     if (_trainCapLabel) {
         int totalCap = ResourceManager::getPopulationCap();
         int usedHousing = tc->getUsedHousing();
@@ -2469,7 +2471,7 @@ void MainScene::refreshTrainingCampUI()
         _trainCapLabel->setString(buf);
     }
 
-    // Update signature
+    
     int sig = 0;
     const auto& ready = tc->getAllReadyCounts();
     for (const auto& kv : ready) {
@@ -2516,7 +2518,7 @@ void MainScene::restoreStandTroopsFromSave(const SaveData& data)
 
     for (const auto& t : data.trainedTroops)
     {
-        // Spawn at saved cell if possible; otherwise fallback to random spawn.
+        
         int r = t.r;
         int c = t.c;
         bool occupied = false;
@@ -2599,7 +2601,7 @@ cocos2d::Sprite* MainScene::createStandTroopSprite(int troopType) const
         }
     }
 
-    // Fallback: use the same icon as training UI if stand sprite is missing.
+    
     auto iconPath = TrainingCamp::getTroopIcon((TrainingCamp::TroopType)troopType);
     if (auto sp = Sprite::create(iconPath))
     {
@@ -2613,7 +2615,7 @@ void MainScene::spawnStandTroop(int troopType)
 {
     if (!_world || !_standTroopLayer) return;
 
-    // Find all Barracks buildings (id == 7).
+    
     std::vector<int> barracksIndices;
     for (int i = 0; i < (int)_buildings.size(); ++i)
     {
@@ -2626,7 +2628,7 @@ void MainScene::spawnStandTroop(int troopType)
         return;
     }
 
-    // Try to pick a free grid cell near a random Barracks.
+    
     int chosenR = 0;
     int chosenC = 0;
     bool found = false;
@@ -2656,7 +2658,7 @@ void MainScene::spawnStandTroop(int troopType)
 
     if (!found)
     {
-        // Fallback: allow stacking in the Barracks center cell.
+        
         int bi = barracksIndices.front();
         chosenR = _buildings[bi].r;
         chosenC = _buildings[bi].c;
@@ -2665,22 +2667,22 @@ void MainScene::spawnStandTroop(int troopType)
     auto sp = createStandTroopSprite(troopType);
     if (!sp) return;
 
-    // Compute isometric world position for the chosen cell.
+    
     Vec2 center(_anchor.x + (chosenC - chosenR) * (_tileW * 0.5f),
                 _anchor.y - (chosenC + chosenR) * (_tileH * 0.5f));
 
-    // Add slight jitter so troops do not perfectly overlap.
+    
     float jx = randomRealSafe(-_tileW * 0.15f, _tileW * 0.15f);
     float jy = randomRealSafe(-_tileH * 0.10f, _tileH * 0.10f);
     Vec2 pos = center + Vec2(jx, _tileH * 0.10f + jy);
 
-    // Scale to fit roughly one tile.
+    
     float desiredW = _tileW * 0.60f;
     float s = desiredW / std::max(1.0f, sp->getContentSize().width);
     sp->setScale(s);
     sp->setPosition(pos);
 
-    // Keep an ordering so troops draw naturally in iso view.
+    
     int z = 5 + chosenR + chosenC;
     _standTroopLayer->addChild(sp, z);
 
@@ -2691,9 +2693,9 @@ void MainScene::spawnStandTroop(int troopType)
     info.sprite = sp;
     _standTroops.push_back(info);
 }
-// =========================
-// Troop levels & Laboratory research
-// =========================
+
+
+
 int MainScene::getTroopLevel(int unitId) const
 {
     auto it = _troopLevels.find(unitId);
@@ -2708,30 +2710,30 @@ void MainScene::setTroopLevel(int unitId, int level)
 
 int MainScene::getLaboratoryMaxTroopLevel(int labLevel, int unitId) const
 {
-    // Mapping based on the user requirement:
-    // Lab1: Barbarian->2
-    // Lab2: Archer->2
-    // Lab3: Giant->2
-    // Lab4: Barbarian->3, Archer->3, WallBreaker->2
-    // Lab5: Giant->3
+    
+    
+    
+    
+    
+    
     labLevel = std::max(1, std::min(5, labLevel));
 
-    if (unitId == 1) { // Barbarian
+    if (unitId == 1) { 
         if (labLevel >= 4) return 3;
         if (labLevel >= 1) return 2;
         return 1;
     }
-    if (unitId == 2) { // Archer
+    if (unitId == 2) { 
         if (labLevel >= 4) return 3;
         if (labLevel >= 2) return 2;
         return 1;
     }
-    if (unitId == 3) { // Giant
+    if (unitId == 3) { 
         if (labLevel >= 5) return 3;
         if (labLevel >= 3) return 2;
         return 1;
     }
-    if (unitId == 4) { // WallBreaker
+    if (unitId == 4) { 
         if (labLevel >= 4) return 2;
         return 1;
     }
@@ -2751,13 +2753,13 @@ void MainScene::updateResearchSystems(float dt)
     if (_activeResearchUnitId <= 0 || _activeResearchRemainSec <= 0.0f || _activeResearchTotalSec <= 0.0f)
         return;
 
-    // Research uses the same time scale cheat as construction in this course project.
+    
     float scaled = dt * _timeScale;
     _activeResearchRemainSec = std::max(0.0f, _activeResearchRemainSec - scaled);
 
     if (_activeResearchRemainSec <= 0.0f)
     {
-        // Complete research.
+        
         setTroopLevel(_activeResearchUnitId, _activeResearchTargetLevel);
 
         _activeResearchUnitId = 0;
@@ -2767,15 +2769,15 @@ void MainScene::updateResearchSystems(float dt)
 
         _saveDirty = true;
 
-        // Refresh any open UI.
+        
         if (_trainMask) _trainLastSig = 0;
         if (_researchMask) _researchLastSig = 0;
     }
 
-    // Keep research UI updating smoothly.
+    
     if (_researchMask)
     {
-        // Update roughly 10 times/second by using a signature rounded to 0.1s.
+        
         int t = (int)std::round(_activeResearchRemainSec * 10.0f);
         int sig = _activeResearchUnitId * 100000 + _activeResearchTargetLevel * 1000 + t;
         if (sig != _researchLastSig)
@@ -2803,7 +2805,7 @@ void MainScene::openLaboratoryResearchPicker(int buildingIndex)
     auto visibleSize = Director::getInstance()->getVisibleSize();
     auto origin = Director::getInstance()->getVisibleOrigin();
 
-    // Modal mask
+    
     _researchMask = LayerColor::create(Color4B(0, 0, 0, 180));
     this->addChild(_researchMask, 260);
 
@@ -2812,7 +2814,7 @@ void MainScene::openLaboratoryResearchPicker(int buildingIndex)
     maskListener->onTouchBegan = [](Touch*, Event*) { return true; };
     _eventDispatcher->addEventListenerWithSceneGraphPriority(maskListener, _researchMask);
 
-    // Panel
+    
     float panelW = visibleSize.width * 0.90f;
     float panelH = visibleSize.height * 0.85f;
     auto panel = LayerColor::create(Color4B(245, 245, 245, 255), panelW, panelH);
@@ -2820,13 +2822,13 @@ void MainScene::openLaboratoryResearchPicker(int buildingIndex)
     _researchMask->addChild(panel, 1);
     _researchPanel = panel;
 
-    // Title
+    
     auto title = Label::createWithSystemFont("Research", "Arial", 26);
     title->setColor(Color3B::BLACK);
     title->setPosition(Vec2(panelW * 0.5f, panelH - 30.f));
     panel->addChild(title, 2);
 
-    // Close button
+    
     auto closeLbl = Label::createWithSystemFont("X", "Arial", 26);
     closeLbl->setColor(Color3B::BLACK);
     auto closeItem = MenuItemLabel::create(closeLbl, [this](Ref*) {
@@ -2838,14 +2840,14 @@ void MainScene::openLaboratoryResearchPicker(int buildingIndex)
     closeMenu->setPosition(Vec2::ZERO);
     panel->addChild(closeMenu, 3);
 
-    // Hint
+    
     auto hint = Label::createWithSystemFont("Choose a troop to research.", "Arial", 18);
     hint->setColor(Color3B::BLACK);
     hint->setAnchorPoint(Vec2(0, 0.5f));
     hint->setPosition(Vec2(20.f, panelH - 80.f));
     panel->addChild(hint, 2);
 
-    // Select row (bottom)
+    
     _researchSelectRow = safeCreateNode();
     if (_researchSelectRow) {
         _researchSelectRow->setPosition(Vec2(20.f, 25.f));
@@ -2904,7 +2906,7 @@ void MainScene::refreshResearchUI()
     auto lab = dynamic_cast<Laboratory*>(pb.data.get());
     if (!lab) return;
 
-    // If the lab is under construction/upgrading, research UI still shows, but all actions are blocked.
+    
     bool labFunctional = (lab->buildState == Building::STATE_NORMAL);
 
     int labLevel = std::max(1, lab->level);
@@ -2915,7 +2917,7 @@ void MainScene::refreshResearchUI()
     float y = 0.0f;
     float gap = 20.0f;
 
-    // Probe icon size
+    
     float iconH = 80.0f;
     {
         auto probe = Sprite::create(TrainingCamp::getTroopIcon(TrainingCamp::TROOP_BARBARIAN));
@@ -2928,7 +2930,7 @@ void MainScene::refreshResearchUI()
         auto btn = ui::Button::create(iconPath, iconPath, iconPath);
         if (!btn) continue;
 
-        // Clamp huge icon sizes (Wall Breaker icon can be large)
+        
         float iconScale = 1.0f;
         {
             auto spr = Sprite::create(iconPath);
@@ -2945,32 +2947,32 @@ void MainScene::refreshResearchUI()
         btn->setPosition(Vec2(x, y));
         _researchSelectRow->addChild(btn, 1);
 
-        // NOTE: btn is scaled (iconScale). Child coordinates are in the
-        // unscaled local space, then scaled by the parent transform.
-        // Use the unscaled size for child layout; use bsz only for spacing.
+        
+        
+        
         Size rawSz = btn->getContentSize();
         Size bsz = rawSz * iconScale;
 
         int curLv = getTroopLevel(type);
         int maxLv = getLaboratoryMaxTroopLevel(labLevel, type);
 
-        // Darken when at cap for this lab.
+        
         if (curLv >= maxLv)
         {
             btn->setColor(Color3B(110, 110, 110));
         }
 
         
-        // Level label (center) - same style as Training "Ready" icons.
+        
         {
             auto lvLbl = Label::createWithSystemFont(StringUtils::format("LV%d", curLv), "Arial", 28);
             lvLbl->setColor(Color3B::BLACK);
-            // Use outline to make the text thicker while keeping a black fill.
+            
             lvLbl->enableOutline(Color4B::BLACK, 3);
             lvLbl->setAnchorPoint(Vec2(0.5f, 0.5f));
             lvLbl->setPosition(Vec2(rawSz.width * 0.5f, rawSz.height * 0.5f));
 
-            // Keep the label inside the icon (use unscaled local size).
+            
             float maxW = rawSz.width * 0.95f;
             float maxH = rawSz.height * 0.60f;
             float bw = lvLbl->getContentSize().width;
@@ -2983,11 +2985,11 @@ void MainScene::refreshResearchUI()
             btn->addChild(lvLbl, 3);
         }
         
-        // Progress bar + countdown shown only on the currently researching troop.
-        // IMPORTANT: place it ABOVE the icon (not inside), and avoid double-scaling bugs.
+        
+        
         {
             float barW = std::max(60.0f, rawSz.width);
-            float barH = 16.0f; // thicker bar
+            float barH = 16.0f; 
 
             auto barBg = LayerColor::create(Color4B(20, 20, 20, 200), barW, barH);
             barBg->setAnchorPoint(Vec2(0.0f, 0.0f));
@@ -2999,7 +3001,7 @@ void MainScene::refreshResearchUI()
             barFill->setPosition(Vec2(0.0f, 0.0f));
             barBg->addChild(barFill, 1);
 
-            // Countdown above the bar.
+            
             auto timeLbl = Label::createWithSystemFont("", "Arial", 32);
             timeLbl->setAnchorPoint(Vec2(0.5f, 0.0f));
             timeLbl->setColor(Color3B::WHITE);
@@ -3024,7 +3026,7 @@ void MainScene::refreshResearchUI()
             }
         }
 
-// Click to start research.
+
         btn->addClickEventListener([this, type, labFunctional, labLevel](Ref*) {
             SoundManager::playSfxRandom("button_click", 1.0f);
             if (!labFunctional) {
